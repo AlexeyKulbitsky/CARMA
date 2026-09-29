@@ -1,0 +1,11 @@
+schema_version: model/0.1
+id: render
+name: Render
+kind: subsystem
+intent: Draws the scene and requests textures.
+members:
+  - path: src/render/**
+requires:
+  - component: streaming
+    via: TextureStreamer
+  - component: core

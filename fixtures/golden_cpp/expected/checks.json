@@ -1,0 +1,11 @@
+{
+  "$comment": "Hand-written. With expected/model, `carma check` at the root level reports exactly these issues and nothing else.",
+  "root": {
+    "undeclared_dependency": [["streaming", "render"]],
+    "cycle": [["render", "streaming"]]
+  },
+  "render": {
+    "$comment": "render has a child component (backend) and its own symbols from src/render/*.",
+    "nodes": ["render._self", "render.backend"]
+  }
+}

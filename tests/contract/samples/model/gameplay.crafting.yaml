@@ -1,0 +1,15 @@
+# A planned component: no members yet, only where it attaches.
+schema_version: model/0.1
+id: gameplay.crafting
+name: Crafting
+kind: component
+lifecycle: planned
+intent: Turns inventory items into new items by recipes.
+intent_source: agent
+requires:
+  - component: gameplay.inventory
+    via: IInventory
+attach_points:
+  - component: gameplay.inventory
+    symbol: "cxx game/IInventory#RemoveItem(ItemId, int)."
+    description: Consumes ingredients from the player's inventory.

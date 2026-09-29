@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carma:contracts/config/0.1",
+  "title": "CARMA project config (.carma/config.yaml, contract 3)",
+  "type": "object",
+  "required": ["schema_version", "compile_db"],
+  "properties": {
+    "schema_version": { "const": "config/0.1" },
+    "compile_db": {
+      "description": "Where compile commands come from: a compile_commands.json file or a CMake build folder read through the File API.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["compile_commands"],
+          "properties": { "compile_commands": { "$ref": "#/$defs/relPath" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["cmake_build_dir"],
+          "properties": {
+            "cmake_build_dir": { "$ref": "#/$defs/relPath" },
+            "configuration": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "indexer": {
+      "type": "object",
+      "properties": {
+        "name": { "enum": ["libclang"] },
+        "libclang": { "type": ["string", "null"], "description": "Path to the libclang library; null means search automatically." },
+        "index_ignored_tus": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "source_roots": { "type": "array", "items": { "$ref": "#/$defs/relPath" } },
+    "ignore": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "skeleton_depth": { "type": "integer", "minimum": 1, "maximum": 6 },
+    "max_nodes": { "type": "integer", "minimum": 10 },
+    "editor_uri": { "type": "string", "pattern": "\\{abs_path\\}" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "relPath": {
+      "description": "Path relative to the project root, '/' as separator.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*\\\\).+$"
+    }
+  }
+}

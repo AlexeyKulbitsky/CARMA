@@ -1,0 +1,19 @@
+# Example from docs/carma-spec.md, «Контракт 3».
+schema_version: config/0.1
+compile_db:
+  cmake_build_dir: build          # или compile_commands: build/compile_commands.json
+  configuration: Debug            # для многоконфигурационных генераторов
+indexer:
+  name: libclang
+  libclang: null                  # путь к библиотеке; null — искать автоматически
+  index_ignored_tus: false
+source_roots: [engine/source, source]
+ignore:                           # по умолчанию, дополняются проектом
+  - "**/third_party/**"
+  - "**/thirdparty/**"
+  - "**/external/**"
+  - "build/**"
+  - "out/**"
+skeleton_depth: 2
+max_nodes: 300
+editor_uri: "vscode://file/{abs_path}:{line}"

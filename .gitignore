@@ -1,0 +1,26 @@
+# Test target: snapshot of the author's engine, not part of the tool
+/gd-engine/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+
+# Build folders (fixtures, CMake)
+build/
+out/
+
+# Per-project CARMA cache
+.carma/cache/
+
+# UI
+node_modules/
+ui/dist/
+
+# IDE
+.vs/
+.vscode/
+.idea/

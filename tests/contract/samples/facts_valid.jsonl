@@ -1,0 +1,9 @@
+{"type":"header","facts_version":"0.1","indexer":{"name":"carma-libclang","version":"0.1.0","clang":"21.1.7"},"platform":"windows","project_root":"C:/Development/CARMA/fixtures/golden_cpp"}
+{"type":"file","path":"src/render/Renderer.cpp","sha256":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","language":"cpp"}
+{"type":"symbol","id":"cxx golden/","display_name":"golden","kind":"namespace","parent_id":null,"defs":[],"decls":[],"external":false}
+{"type":"symbol","id":"cxx golden/render/Renderer#DrawScene().","display_name":"DrawScene","kind":"method","parent_id":"cxx golden/render/Renderer#","signature":"void DrawScene()","doc":null,"access":"public","defs":[{"path":"src/render/Renderer.cpp","range":[14,15,14,24],"extent":[14,0,32,1]}],"decls":[{"path":"src/render/Renderer.h","range":[18,9,18,18],"extent":[18,4,18,20]}],"external":false,"usr":"c:@N@golden@N@render@S@Renderer@F@DrawScene#"}
+{"type":"symbol","id":"cxx std/basic_string#","display_name":"basic_string","kind":"class","parent_id":"cxx std/","access":null,"defs":[],"decls":[],"external":true}
+{"type":"ref","symbol":"cxx golden/streaming/TextureStreamer#RequestLoad(const std::string&).","path":"src/render/Renderer.cpp","range":[26,15,26,26],"roles":["call"],"container":"cxx golden/render/Renderer#DrawScene()."}
+{"type":"ref","symbol":"cxx golden/render/OnShutdown().","path":"src/render/Renderer.cpp","range":[29,17,29,27],"roles":["reference"],"container":"cxx golden/render/Renderer#DrawScene()."}
+{"type":"ref","symbol":"cxx golden/render/ComputeDefaultWidth().","path":"src/render/Renderer.cpp","range":[10,33,10,52],"roles":["call"],"container":null}
+{"type":"relation","from":"cxx golden/render/Mesh#Draw().","to":"cxx golden/render/IRenderable#Draw().","kind":"overrides"}

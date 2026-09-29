@@ -1,0 +1,37 @@
+{
+  "$comment": "Hand-written. 'calls' must appear as refs with role 'call' from the given container; 'references' with role 'reference' and not 'call'; 'not_calls' must never appear as calls.",
+  "calls": [
+    { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/render/IRenderable#Draw().", "at": "src/render/Renderer.cpp", "note": "inside a lambda: attributed to the enclosing function" },
+    { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/streaming/TextureStreamer#RequestLoad(const std::string&).", "at": "src/render/Renderer.cpp" },
+    { "from": "cxx golden/streaming/TextureStreamer#RequestLoad(const std::string&).", "to": "cxx golden/streaming/`src/streaming/TextureStreamer.cpp`/Clamp(int).", "at": "src/streaming/TextureStreamer.cpp" },
+    { "from": "cxx golden/streaming/TextureStreamer#RequestLoad(const std::string&).", "to": "cxx golden/io/IoQueue#Submit(std::function<void()>).", "at": "src/streaming/TextureStreamer.cpp" },
+    { "from": "cxx golden/streaming/TextureStreamer#RequestLoad(const std::string&).", "to": "cxx golden/streaming/TextureStreamer#OnLoaded(const std::string&).", "at": "src/streaming/TextureStreamer.cpp", "note": "inside a lambda" },
+    { "from": "cxx golden/streaming/TextureStreamer#OnLoaded(const std::string&).", "to": "cxx golden/render/GpuUploader#Upload(const std::string&).", "at": "src/streaming/TextureStreamer.cpp" },
+    { "from": "cxx golden/streaming/TextureStreamer#OnLoaded(const std::string&).", "to": "cxx golden/streaming/`src/streaming/TextureStreamer.cpp`/Clamp(int).", "at": "src/streaming/TextureStreamer.cpp" },
+    { "from": "cxx golden/io/IoQueue#Read(const std::string&).", "to": "cxx fakelib/Hash(const char*).", "at": "src/io/IoQueue.cpp" },
+    { "from": "cxx golden/io/IoQueue#Read(const std::string&).", "to": "cxx golden/io/`src/io/IoQueue.cpp`/Normalize(const std::string&).", "at": "src/io/IoQueue.cpp" },
+    { "from": "cxx golden/io/IoQueue#Read(const std::string&).", "to": "cxx golden/io/`src/io/IoQueue.cpp`/Clamp(int).", "at": "src/io/IoQueue.cpp" },
+    { "from": "cxx golden/io/IoQueue#Read(std::size_t).", "to": "cxx golden/io/IoQueue#Read(const std::string&).", "at": "src/io/IoQueue.cpp" },
+    { "from": "cxx golden/render/Mesh#GetTypeId()const.", "to": "cxx golden/render/Mesh#TypeId().", "at": "src/render/backend/Mesh.h", "note": "body comes from GOLDEN_COMPONENT" },
+    { "from": "cxx golden/render/Mesh#TypeId().", "to": "cxx golden/core/Component#StaticTypeId<T>().", "at": "src/render/backend/Mesh.h", "note": "implicit instantiation resolves to the template" },
+    { "from": "cxx golden/streaming/TextureStreamer#GetTypeId()const.", "to": "cxx golden/streaming/TextureStreamer#TypeId().", "at": "src/streaming/TextureStreamer.h" },
+    { "from": "cxx main().", "to": "cxx golden/render/Renderer#DrawScene().", "at": "apps/app_main.cpp" },
+    { "from": "cxx main().", "to": "cxx golden/io/IoQueue#Process().", "at": "apps/app_main.cpp" },
+    { "from": "cxx main().", "to": "cxx golden/io/IoQueue#Read(const std::string&).", "at": "apps/tool_main.cpp" },
+    { "from": "cxx main().", "to": "cxx golden/io/PlatformRoot().", "at": "apps/tool_main.cpp" },
+    { "from": "cxx main().", "to": "cxx golden/io/RingBuffer#Push(const T&).", "at": "apps/tool_main.cpp", "note": "RingBuffer<int> is an implicit instantiation" },
+    { "from": "cxx main().", "to": "cxx golden/io/RingBuffer<bool, 8>#Push(bool).", "at": "apps/tool_main.cpp", "note": "explicit specialization keeps its own ID" },
+    { "from": null, "to": "cxx golden/render/ComputeDefaultWidth().", "at": "src/render/Renderer.cpp", "note": "global initializer: container null" }
+  ],
+  "references": [
+    { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/render/OnShutdown().", "at": "src/render/Renderer.cpp", "note": "address taken, not called" },
+    { "from": "cxx golden/render/Renderer#", "to": "cxx golden/streaming/TextureStreamer#", "at": "src/render/Renderer.h", "note": "field type: class container" },
+    { "from": "cxx golden/render/Renderer#", "to": "cxx golden/core/FrameStats#", "at": "src/render/Renderer.h", "note": "field type: class container" },
+    { "from": "cxx golden/streaming/TextureStreamer#", "to": "cxx golden/io/FileHandle#", "at": "src/streaming/TextureStreamer.h", "note": "field type: class container" },
+    { "from": "cxx golden/render/Mesh#", "to": "cxx golden/render/IRenderable#", "at": "src/render/backend/Mesh.h", "note": "base class: class container" }
+  ],
+  "not_calls": [
+    { "from": "cxx golden/io/IoQueue#Process().", "to": "cxx golden/streaming/TextureStreamer#OnLoaded(const std::string&).", "why": "async hop through the task queue is invisible to the static call graph" },
+    { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/render/OnShutdown().", "why": "the address is taken, the function is not called here" }
+  ]
+}

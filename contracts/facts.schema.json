@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carma:contracts/facts/0.1",
+  "title": "CARMA facts record (contract 1, facts 0.1)",
+  "description": "One line of the JSONL fact stream. The first line of a stream is a header; the rest are file, symbol, ref and relation records. See docs/carma-spec.md, «Контракт 1».",
+  "oneOf": [
+    { "$ref": "#/$defs/header" },
+    { "$ref": "#/$defs/file" },
+    { "$ref": "#/$defs/symbol" },
+    { "$ref": "#/$defs/ref" },
+    { "$ref": "#/$defs/relation" }
+  ],
+  "$defs": {
+    "path": {
+      "description": "File path relative to the project root, '/' as separator on every OS.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?!/)(?!.*\\\\)(?!(.*/)?\\.\\.(/|$)).+$"
+    },
+    "symbolId": {
+      "description": "Canonical symbol ID: 'cxx ' followed by descriptors. See «Канонические идентификаторы».",
+      "type": "string",
+      "pattern": "^cxx \\S.*$"
+    },
+    "range": {
+      "description": "[start_line, start_col, end_line, end_col], 0-based, half-open, columns in UTF-8 bytes.",
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0 },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "loc": {
+      "type": "object",
+      "required": ["path", "range", "extent"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "range": { "$ref": "#/$defs/range", "description": "Range of the name." },
+        "extent": { "$ref": "#/$defs/range", "description": "Range of the whole declaration including the body." }
+      },
+      "additionalProperties": false
+    },
+    "header": {
+      "type": "object",
+      "required": ["type", "facts_version", "indexer", "platform", "project_root"],
+      "properties": {
+        "type": { "const": "header" },
+        "facts_version": { "const": "0.1" },
+        "indexer": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "clang": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "platform": { "enum": ["windows", "macos", "linux"] },
+        "project_root": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "file": {
+      "type": "object",
+      "required": ["type", "path", "sha256", "language"],
+      "properties": {
+        "type": { "const": "file" },
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "language": { "enum": ["c", "cpp", "other"] }
+      },
+      "additionalProperties": false
+    },
+    "symbol": {
+      "type": "object",
+      "required": ["type", "id", "display_name", "kind", "parent_id", "defs", "decls", "external"],
+      "properties": {
+        "type": { "const": "symbol" },
+        "id": { "$ref": "#/$defs/symbolId" },
+        "display_name": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": [
+            "namespace", "class", "struct", "union", "enum", "enum_member",
+            "function", "method", "constructor", "field", "variable", "macro",
+            "type_alias", "concept", "file", "other"
+          ]
+        },
+        "parent_id": {
+          "oneOf": [{ "$ref": "#/$defs/symbolId" }, { "type": "null" }]
+        },
+        "signature": { "type": ["string", "null"] },
+        "doc": { "type": ["string", "null"], "maxLength": 2048 },
+        "access": { "enum": ["public", "protected", "private", null] },
+        "defs": { "type": "array", "items": { "$ref": "#/$defs/loc" } },
+        "decls": { "type": "array", "items": { "$ref": "#/$defs/loc" } },
+        "external": { "type": "boolean" },
+        "usr": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "ref": {
+      "type": "object",
+      "required": ["type", "symbol", "path", "range", "roles", "container"],
+      "properties": {
+        "type": { "const": "ref" },
+        "symbol": { "$ref": "#/$defs/symbolId" },
+        "path": { "$ref": "#/$defs/path" },
+        "range": { "$ref": "#/$defs/range" },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["call", "reference", "expansion", "definition", "forward_decl", "read", "write"]
+          }
+        },
+        "container": {
+          "oneOf": [{ "$ref": "#/$defs/symbolId" }, { "type": "null" }]
+        }
+      },
+      "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "required": ["type", "from", "to", "kind"],
+      "properties": {
+        "type": { "const": "relation" },
+        "from": { "$ref": "#/$defs/symbolId" },
+        "to": { "$ref": "#/$defs/symbolId" },
+        "kind": { "enum": ["inherits", "overrides", "type_definition"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

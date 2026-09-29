@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carma:contracts/layout/0.1",
+  "title": "CARMA pinned node positions (.carma/layout.json, contract 3)",
+  "description": "Only positions a person pinned by dragging. Auto-layout positions live in .carma/cache/.",
+  "type": "object",
+  "required": ["layout_version", "views"],
+  "properties": {
+    "layout_version": { "const": "0.1" },
+    "views": {
+      "description": "scope ('root' or a component ID) -> node ID -> position.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

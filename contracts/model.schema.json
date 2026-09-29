@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carma:contracts/model/0.1",
+  "title": "CARMA component file (contract 3, model 0.1)",
+  "description": "One YAML file per component in .carma/model/<id>.yaml. See docs/carma-spec.md, «Контракт 3».",
+  "type": "object",
+  "required": ["schema_version", "id", "name"],
+  "properties": {
+    "schema_version": { "const": "model/0.1" },
+    "id": { "$ref": "#/$defs/componentId" },
+    "name": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["system", "subsystem", "component"] },
+    "lifecycle": { "enum": ["current", "planned", "deprecated"] },
+    "intent": { "type": "string" },
+    "intent_source": { "enum": ["human", "agent"] },
+    "members": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/rulePath" },
+          { "$ref": "#/$defs/ruleNamespace" },
+          { "$ref": "#/$defs/ruleSymbol" },
+          {
+            "type": "object",
+            "required": ["exclude"],
+            "properties": {
+              "exclude": {
+                "oneOf": [
+                  { "$ref": "#/$defs/rulePath" },
+                  { "$ref": "#/$defs/ruleNamespace" },
+                  { "$ref": "#/$defs/ruleSymbol" }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "provides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["interface"],
+        "properties": {
+          "interface": { "type": "string", "minLength": 1 },
+          "symbols": { "type": "array", "items": { "$ref": "#/$defs/symbolId" } }
+        },
+        "additionalProperties": false
+      }
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["component"],
+        "properties": {
+          "component": { "$ref": "#/$defs/componentId" },
+          "via": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "runtime": {
+      "description": "Open dictionary of domain annotations; recommended keys: thread, frame_phase, authority, replication, ownership, lifetime.",
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean"] }
+    },
+    "invariants": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "manual": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "reason"],
+        "properties": {
+          "symbol": { "$ref": "#/$defs/symbolId" },
+          "reason": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "attach_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["component", "description"],
+        "properties": {
+          "component": { "$ref": "#/$defs/componentId" },
+          "symbol": { "$ref": "#/$defs/symbolId" },
+          "description": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text", "source"],
+        "properties": {
+          "text": { "type": "string", "minLength": 1 },
+          "source": { "enum": ["human", "agent"] },
+          "date": { "$ref": "#/$defs/date" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sync": {
+      "type": "object",
+      "properties": {
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{8,64}$" },
+        "annotated_at": { "$ref": "#/$defs/date" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": { "lifecycle": { "const": "planned" } },
+    "required": ["lifecycle"]
+  },
+  "else": { "required": ["members"] },
+  "$defs": {
+    "componentId": {
+      "description": "Dot-separated slugs. 'root' and segments starting with '_' are reserved for the core.",
+      "type": "string",
+      "pattern": "^(?!root$)[a-z0-9][a-z0-9_-]*(\\.[a-z0-9][a-z0-9_-]*)*$"
+    },
+    "symbolId": { "type": "string", "pattern": "^cxx \\S.*$" },
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "rulePath": {
+      "type": "object",
+      "required": ["path"],
+      "properties": { "path": { "type": "string", "minLength": 1, "pattern": "^(?![A-Za-z]:)(?!/)(?!.*\\\\).+$" } },
+      "additionalProperties": false
+    },
+    "ruleNamespace": {
+      "type": "object",
+      "required": ["namespace"],
+      "properties": {
+        "namespace": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*$" }
+      },
+      "additionalProperties": false
+    },
+    "ruleSymbol": {
+      "type": "object",
+      "required": ["symbol"],
+      "properties": { "symbol": { "$ref": "#/$defs/symbolId" } },
+      "additionalProperties": false
+    }
+  }
+}

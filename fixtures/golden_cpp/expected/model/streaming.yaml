@@ -1,0 +1,13 @@
+# requires deliberately omits render: the fixture's streaming -> render call
+# is the one undeclared dependency the checks must find.
+schema_version: model/0.1
+id: streaming
+name: Streaming
+kind: subsystem
+intent: Loads textures asynchronously through the IO queue.
+members:
+  - path: src/streaming/**
+requires:
+  - component: io
+    via: IoQueue
+  - component: core

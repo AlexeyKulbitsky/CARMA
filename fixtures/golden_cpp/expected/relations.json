@@ -1,0 +1,11 @@
+{
+  "$comment": "Hand-written. Every listed relation must be present.",
+  "relations": [
+    { "from": "cxx golden/render/Mesh#", "to": "cxx golden/core/Component#", "kind": "inherits" },
+    { "from": "cxx golden/render/Mesh#", "to": "cxx golden/render/IRenderable#", "kind": "inherits" },
+    { "from": "cxx golden/streaming/TextureStreamer#", "to": "cxx golden/core/Component#", "kind": "inherits" },
+    { "from": "cxx golden/render/Mesh#Draw().", "to": "cxx golden/render/IRenderable#Draw().", "kind": "overrides" },
+    { "from": "cxx golden/render/Mesh#GetTypeId()const.", "to": "cxx golden/core/Component#GetTypeId()const.", "kind": "overrides" },
+    { "from": "cxx golden/streaming/TextureStreamer#GetTypeId()const.", "to": "cxx golden/core/Component#GetTypeId()const.", "kind": "overrides" }
+  ]
+}

@@ -1,0 +1,37 @@
+[project]
+name = "carma"
+version = "0.0.1"
+description = "CARMA: an architecture map of a C++ codebase, built from indexed facts and an editable model"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "jsonschema>=4.23",
+    "ruamel.yaml>=0.18",
+]
+
+[project.scripts]
+carma = "carma.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["carma"]
+
+# Contract files live in contracts/ at the repo root; installed builds carry a copy.
+[tool.hatch.build.targets.wheel.force-include]
+"contracts" = "carma/_contracts"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "e2e: needs external tools such as CMake and a C++ compiler",
+]

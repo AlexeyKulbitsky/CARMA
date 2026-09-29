@@ -1,0 +1,47 @@
+# Example from docs/carma-spec.md, «Файл компонента».
+schema_version: model/0.1
+id: gameplay.inventory
+name: Inventory
+kind: component            # system | subsystem | component
+lifecycle: current         # current | planned | deprecated
+intent: >
+  Хранит предметы персонажа, валидирует операции на сервере,
+  реплицирует состояние владельцу.
+intent_source: human       # human | agent
+
+members:
+  - path: src/gameplay/inventory/**
+  - namespace: game::inventory
+  - symbol: "cxx game/InventoryDebugHud#"
+  - exclude: { path: src/gameplay/inventory/tests/** }
+
+provides:
+  - interface: IInventory
+    symbols: ["cxx game/IInventory#"]
+requires:
+  - component: gameplay.items
+    via: ItemDatabase
+
+runtime:                   # открытый словарь, ключи ниже рекомендованные
+  thread: game
+  frame_phase: pre_physics
+  authority: server
+  replication: owner_only
+  ownership: "Items принадлежат компоненту, UI держит weak refs"
+
+invariants:
+  - "Количество в стеке не превышает MaxStack"
+
+manual:                    # зоны ручного кода, этап 2 их не трогает
+  - symbol: "cxx game/InventoryComponent#CompactStorage()."
+    reason: hot path, ручная оптимизация
+
+attach_points: []          # только для planned: куда компонент подключается
+notes:
+  - text: "Стек предметов пересобирается при загрузке сейва"
+    source: agent          # human | agent
+    date: 2026-09-29
+
+sync:
+  fingerprint: 9f3a1c07    # хеш сигнатур якорных символов на момент аннотации
+  annotated_at: 2026-09-29
