@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from carma.contracts import validation_errors
 from carma.model import yaml_io
+from carma.model.files import write_atomic
 
 CARMA_DIR = ".carma"
 CONFIG_FILE = "config.yaml"
@@ -78,3 +81,68 @@ def load_config(project_root: Path) -> Config:
         editor_uri=data.get("editor_uri", DEFAULT_EDITOR_URI),
         raw=data,
     )
+
+
+# ---------------------------------------------------------------- carma init
+
+GITIGNORE = "cache/\n"
+
+_CONFIG_TEMPLATE = """\
+schema_version: config/0.1
+compile_db:
+{compile_db}
+indexer:
+  name: libclang
+  libclang: null                  # path to the libclang library; null searches automatically
+  index_ignored_tus: false        # also parse translation units under the ignore globs
+source_roots: {source_roots}{source_roots_note}
+ignore:                           # symbols here go to _external; extend for the project
+{ignore}
+skeleton_depth: 2                 # model skeleton depth, counted from each source root
+max_nodes: 300                    # above this, a level groups its nodes by files or folders
+editor_uri: "{editor_uri}"
+"""
+
+
+def detect_compile_db(project_root: Path) -> dict | None:
+    """compile_commands.json in the root or in build/, then a CMake build folder build/."""
+    for rel in ("compile_commands.json", "build/compile_commands.json"):
+        if (project_root / rel).is_file():
+            return {"compile_commands": rel}
+    if (project_root / "build" / "CMakeCache.txt").is_file():
+        return {"cmake_build_dir": "build", "configuration": "Debug"}
+    return None
+
+
+def project_relative(project_root: Path, path: Path) -> str:
+    """A path given on the command line as the config stores it: relative to the project root, with '/'."""
+    absolute = path if path.is_absolute() else Path.cwd() / path
+    try:
+        rel = os.path.relpath(absolute.resolve(), project_root.resolve())
+    except ValueError as exc:  # another drive on Windows
+        raise ConfigError(f"{path} must be on the same drive as the project") from exc
+    return Path(rel).as_posix()
+
+
+def write_config(project_root: Path, compile_db: dict, source_roots: list[str]) -> Path:
+    """Create .carma/config.yaml with the defaults of the spec, and .carma/.gitignore for the cache."""
+    if "compile_commands" in compile_db:
+        block = f"  compile_commands: {json.dumps(compile_db['compile_commands'])}"
+    else:
+        block = (f"  cmake_build_dir: {json.dumps(compile_db['cmake_build_dir'])}    # read through the CMake File API\n"
+                 f"  configuration: {json.dumps(compile_db.get('configuration', 'Debug'))}    # for multi-config generators")
+    text = _CONFIG_TEMPLATE.format(
+        compile_db=block,
+        source_roots=json.dumps(source_roots),
+        source_roots_note="" if source_roots else "                # empty: the skeleton starts at the project root",
+        ignore="\n".join(f"  - {json.dumps(glob)}" for glob in DEFAULT_IGNORE),
+        editor_uri=DEFAULT_EDITOR_URI,
+    )
+    errors = validation_errors("config", yaml_io.to_plain(yaml_io.loads(text)))
+    if errors:
+        raise ConfigError("the new config.yaml would be invalid:\n  " + "\n  ".join(errors))
+    carma_dir = project_root / CARMA_DIR
+    write_atomic(carma_dir / CONFIG_FILE, text)
+    if not (carma_dir / ".gitignore").exists():
+        write_atomic(carma_dir / ".gitignore", GITIGNORE)
+    return carma_dir / CONFIG_FILE

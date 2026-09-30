@@ -6,11 +6,11 @@ DuckDB or an in-memory graph later) must pass the same contract tests.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from typing import Literal, Protocol, runtime_checkable
 
-CONTRACT_VERSION = "store/0.1"
+CONTRACT_VERSION = "store/0.2"
 
 Range = tuple[int, int, int, int]
 Role = Literal["call", "reference", "expansion", "definition", "forward_decl", "read", "write"]
@@ -124,6 +124,9 @@ class FactStore(Protocol):
 
     # lookup
     def get_symbol(self, id: str) -> Symbol | None: ...
+    def iter_symbols(self) -> Iterator[Symbol]:
+        """Every symbol in one pass, ordered by ID; the core resolves membership over all of them."""
+        ...
     def search_symbols(self, text: str, kinds: list[str] | None = None, limit: int = 50) -> list[Symbol]: ...
     def symbols_in_file(self, path: str) -> list[Symbol]: ...
     def list_files(self, glob: str | None = None) -> list[str]: ...

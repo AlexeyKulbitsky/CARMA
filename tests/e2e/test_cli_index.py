@@ -34,3 +34,23 @@ def test_index_then_reindex(project, capsys):
     # nothing changed: nothing is reloaded
     assert main(["index", "--project", str(project), "--jobs", "2"]) == 0
     assert "0 of" in capsys.readouterr().out
+
+
+def test_init_indexes_and_writes_the_skeleton(golden_dir, tmp_path, cmake, libclang_path, capsys):
+    """M2: `carma init` on a configured project without .carma/: config, indexing, skeleton, then `carma check`."""
+    root = tmp_path / "golden"
+    shutil.copytree(golden_dir, root, ignore=shutil.ignore_patterns("expected", "facts.jsonl"))
+    result = subprocess.run([cmake, "-S", str(root), "-B", str(root / "build")], capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    code = main(["init", "--project", str(root), "--cmake-build-dir", str(root / "build"),
+                 "--source-root", str(root / "src"), "--source-root", str(root / "apps"), "--jobs", "2"])
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert "cmake_build_dir: build" in out and "the store is empty, indexing first" in out and "9 TUs" in out
+    model = sorted(p.stem for p in (root / ".carma" / "model").glob("*.yaml"))
+    assert model == ["apps", "core", "io", "render", "render.backend", "streaming"]
+
+    # the skeleton declares no requires, so only the render <-> streaming cycle is left
+    assert main(["check", "--project", str(root)]) == 1
+    assert "cycle                  render <-> streaming (level root)" in capsys.readouterr().out

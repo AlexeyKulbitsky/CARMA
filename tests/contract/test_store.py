@@ -54,7 +54,7 @@ def membership(store, golden_facts):
 
 def test_is_a_fact_store(store):
     assert isinstance(store, FactStore)
-    assert store.contract_version == "store/0.1"
+    assert store.contract_version == "store/0.2"
 
 
 def test_stats(store):
@@ -73,6 +73,13 @@ def test_get_symbol(store):
 
 def test_two_definitions_of_main(store):
     assert sorted(loc.path for loc in store.get_symbol(MAIN).defs) == ["apps/app_main.cpp", "apps/tool_main.cpp"]
+
+
+def test_iter_symbols(store, golden_facts):
+    records = {r["id"] for r in iter_records(golden_facts) if r["type"] == "symbol"}
+    symbols = list(store.iter_symbols())
+    assert [s.id for s in symbols] == sorted(records)
+    assert all(s == store.get_symbol(s.id) for s in symbols)  # same Symbol, locations included
 
 
 def test_search_symbols(store):

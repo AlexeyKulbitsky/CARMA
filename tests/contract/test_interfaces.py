@@ -7,7 +7,7 @@ from carma.store import api as store_api
 # docs/carma-spec.md, «Контракт 2».
 STORE_OPERATIONS = {
     "begin_load", "file_hashes",
-    "get_symbol", "search_symbols", "symbols_in_file", "list_files", "symbol_at",
+    "get_symbol", "iter_symbols", "search_symbols", "symbols_in_file", "list_files", "symbol_at",
     "refs_to", "refs_from", "relations",
     "set_membership", "component_edges", "edge_samples",
     "callers", "callees", "paths",
@@ -27,7 +27,7 @@ def protocol_methods(protocol) -> set[str]:
 
 
 def test_store_operations():
-    assert store_api.CONTRACT_VERSION == "store/0.1"
+    assert store_api.CONTRACT_VERSION == "store/0.2"
     assert protocol_methods(store_api.FactStore) == STORE_OPERATIONS
     assert protocol_methods(store_api.LoadSession) == {"put", "delete_file", "commit"}
 

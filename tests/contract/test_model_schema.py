@@ -117,3 +117,23 @@ def test_layout():
     assert validation_errors("layout", missing_y)
     string_x = {"layout_version": "0.1", "views": {"root": {"gameplay": {"x": "120", "y": 80}}}}
     assert validation_errors("layout", string_x)
+
+
+def test_writes_keep_comments_and_key_order(samples_dir, tmp_path):
+    """The core is the only writer (spec «Правила записи»): an edit touches only what changed."""
+    import shutil
+
+    from carma.model.repo import ModelRepo, ModelValidationError
+
+    folder = tmp_path / "model"
+    shutil.copytree(samples_dir / "model", folder)
+    repo = ModelRepo(folder)
+    path = repo.path_of("gameplay.inventory")
+    original = path.read_text(encoding="utf-8")
+    repo.write(repo.read("gameplay.inventory"))
+    assert path.read_text(encoding="utf-8") == original
+    repo.patch("gameplay.inventory", {"name": "Bag"})
+    unpad = lambda text: re.sub(r"\{\s+", "{", re.sub(r"\s+\}", "}", text))  # noqa: E731
+    assert unpad(path.read_text(encoding="utf-8")) == unpad(original).replace("name: Inventory", "name: Bag")
+    with pytest.raises(ModelValidationError):
+        repo.patch("gameplay.inventory", {"id": "render._self"})

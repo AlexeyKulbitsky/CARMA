@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from array import array
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -190,7 +190,10 @@ class _Load:
 
 
 class SQLiteStore:
-    """FactStore on SQLite; path ':memory:' gives a throwaway store."""
+    """FactStore on SQLite; path ':memory:' gives a throwaway store.
+
+    One connection that any thread may use; callers serialize access (the core holds a lock).
+    """
 
     contract_version = CONTRACT_VERSION
 
@@ -198,7 +201,7 @@ class SQLiteStore:
         self.path = path
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(path), isolation_level=None)
+        self._db = sqlite3.connect(str(path), isolation_level=None, check_same_thread=False)
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.executescript(SCHEMA)
         self._graph: _CallGraph | None = None
@@ -246,6 +249,18 @@ class SQLiteStore:
     def get_symbol(self, id: str) -> Symbol | None:
         row = self._db.execute(self._SYMBOL_SELECT + " WHERE s.id=? AND s.kind IS NOT NULL", (id,)).fetchone()
         return self._symbol(row) if row else None
+
+    def iter_symbols(self) -> Iterator[Symbol]:
+        locs: dict[int, tuple[list[Loc], list[Loc]]] = {}
+        for key, is_def, path, sl, sc, el, ec, esl, esc, eel, eec in self._db.execute(
+            "SELECT symbol_key, is_def, path, sl, sc, el, ec, esl, esc, eel, eec FROM symbol_locs ORDER BY symbol_key, path, sl, sc"
+        ):
+            locs.setdefault(key, ([], []))[0 if is_def else 1].append(Loc(path, (sl, sc, el, ec), (esl, esc, eel, eec)))
+        rows = self._db.execute(self._SYMBOL_SELECT + " WHERE s.kind IS NOT NULL ORDER BY s.id").fetchall()
+        for row in rows:
+            defs, decls = locs.get(row[0], ((), ()))
+            yield Symbol(id=row[1], display_name=row[2], kind=row[3], parent_id=row[4], signature=row[5], doc=row[6],
+                         access=row[7], defs=tuple(defs), decls=tuple(decls), external=bool(row[8]), usr=row[9])
 
     def search_symbols(self, text: str, kinds: list[str] | None = None, limit: int = 50) -> list[Symbol]:
         escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

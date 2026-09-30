@@ -10,6 +10,7 @@ dependencies = [
     "clang>=21",
     "jsonschema>=4.23",
     "ruamel.yaml>=0.18",
+    "watchfiles>=1.0",
 ]
 
 [project.scripts]
