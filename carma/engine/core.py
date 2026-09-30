@@ -11,20 +11,44 @@ from __future__ import annotations
 import dataclasses
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from carma.config import Config
-from carma.engine import views
+from carma.engine import queries, views
 from carma.engine.checks import Issue
 from carma.engine.highlight import Highlight, LiftedHighlight, lift, parse_highlight
 from carma.engine.state import State, build_state
-from carma.engine.symbols import SymbolInfo
+from carma.engine.symbols import SymbolInfo, place_loc
+from carma.engine.tree import ROOT
 from carma.model.layout import Positions, load_layout, save_layout
 from carma.model.repo import ModelRepo, ModelSnapshot
 from carma.model.watch import ModelWatcher
-from carma.store.api import FactStore
+from carma.store.api import CallEdge, FactStore, Ref, StoreStats, Symbol
 
 Listener = Callable[[str], None]
+
+
+class UnknownSymbol(KeyError):
+    pass
+
+
+@dataclass(frozen=True)
+class SymbolCard:
+    symbol: Symbol
+    component: str | None  # None for namespaces
+    place: tuple[str, str] | None  # (scope, node) of the level that draws it
+    editor_uri: str | None
+
+
+@dataclass(frozen=True)
+class Status:
+    project_root: str
+    facts: StoreStats
+    components: int
+    invalid_files: tuple[str, ...]
+    issues: int
+    highlight: bool
 
 
 class Core:
@@ -92,6 +116,68 @@ class Core:
         with self._lock:
             return views.view(self.state, self.store, scope)
 
+    def status(self) -> Status:
+        with self._lock:
+            state = self.state
+            return Status(project_root=str(self.config.project_root), facts=self.store.stats(),
+                          components=len(state.model.components), invalid_files=tuple(sorted(state.model.invalid)),
+                          issues=len(state.issues), highlight=self._highlight is not None)
+
+    def component_tree(self, parent: str = ROOT) -> tuple[queries.TreeNode, ...]:
+        with self._lock:
+            return queries.component_tree(self.state, parent)
+
+    def component_card(self, component_id: str) -> queries.ComponentCard:
+        with self._lock:
+            return queries.component_card(self.state, component_id)
+
+    def edge_samples(self, scope: str, src: str, dst: str, limit: int = 20) -> tuple[list[Ref], bool]:
+        with self._lock:
+            return views.edge_samples(self.state, self.store, scope, src, dst, limit)
+
+    # ---------------------------------------------------------------- symbols
+
+    def component_of(self, symbol_id: str) -> str | None:
+        return self.state.membership.component_of.get(symbol_id)
+
+    def symbol_name(self, symbol_id: str) -> str:
+        info = self.state.symbols.get(symbol_id)
+        return info.name if info else symbol_id
+
+    def search_symbols(self, text: str, kinds: list[str] | None = None, limit: int = 50) -> tuple[list[Symbol], bool]:
+        with self._lock:
+            found = self.store.search_symbols(text, kinds, limit + 1)
+            return found[:limit], len(found) > limit
+
+    def symbol(self, symbol_id: str) -> SymbolCard:
+        with self._lock:
+            symbol = self.store.get_symbol(symbol_id)
+            if symbol is None:
+                raise UnknownSymbol(symbol_id)
+            loc = place_loc(symbol)
+            uri = self.config.editor_link(loc.path, loc.range[0] + 1) if loc and not symbol.external else None
+            return SymbolCard(symbol, self.component_of(symbol_id), views.symbol_place(self.state, symbol_id), uri)
+
+    def _known(self, symbol_id: str) -> None:
+        if symbol_id not in self.state.symbols:
+            raise UnknownSymbol(symbol_id)
+
+    def callers(self, symbol_id: str, depth: int = 1) -> list[CallEdge]:
+        with self._lock:
+            self._known(symbol_id)
+            return self.store.callers(symbol_id, depth)
+
+    def callees(self, symbol_id: str, depth: int = 1) -> list[CallEdge]:
+        with self._lock:
+            self._known(symbol_id)
+            return self.store.callees(symbol_id, depth)
+
+    def paths(self, src: str, dst: str, max_depth: int = 6, limit: int = 5) -> list[list[str]]:
+        with self._lock:
+            self._known(src)
+            self._known(dst)
+            return self.store.paths(src, dst, max_depth, limit)
+
     # ---------------------------------------------------------------- model writes
 
     def create_component(self, data: dict) -> dict:
@@ -119,6 +205,7 @@ class Core:
 
     def save_layout(self, scope: str, positions: Positions) -> None:
         with self._lock:
+            views.level_of(self.state, scope)  # UnknownScope for a level that does not exist
             layout = save_layout(self.config.carma_dir, scope, positions)
             self._state = dataclasses.replace(self.state, layout=layout)
 

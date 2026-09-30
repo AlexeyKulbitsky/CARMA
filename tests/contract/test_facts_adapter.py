@@ -150,7 +150,7 @@ def test_ranges_are_inside_files(golden_dir, facts):
 
 
 def test_project_ids_match_the_committed_stream(expected, symbols, golden_facts):
-    """The same code gives the same IDs on every OS (the committed stream comes from Windows)."""
+    """The same code gives the same IDs on every OS, whichever OS the committed stream came from."""
     platform_only = {e["id"] for e in expected["symbols"]["present"] if "platforms" in e}
     committed = {r["id"] for r in read_jsonl(golden_facts) if r["type"] == "symbol" and not r["external"]}
     fresh = {sid for sid, s in symbols.items() if not s["external"]}

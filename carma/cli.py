@@ -39,6 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
             cmd.add_argument("--jobs", type=int, help="worker processes (default: number of CPUs)")
         if name == "index":
             cmd.add_argument("--full", action="store_true", help="reload every file into the store")
+        if name == "serve":
+            cmd.add_argument("--host", default="127.0.0.1", help="address to listen on (default: 127.0.0.1)")
+            cmd.add_argument("--port", type=int, default=8765, help="port (default: 8765)")
+            cmd.add_argument("--no-watch", action="store_true", help="do not pick up hand edits of .carma/model/")
+            cmd.add_argument("--open", action="store_true", help="open the map in the default browser")
     return parser
 
 
@@ -204,7 +209,47 @@ def _check(args) -> int:
     return 1 if count else 0
 
 
-HANDLERS = {"index": _index, "init": _init, "check": _check}
+def _serve(args) -> int:
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from carma.api.app import PREFIX, UI_DIR, create_app
+    from carma.config import ConfigError, load_config
+    from carma.engine.core import Core
+    from carma.store.sqlite import SQLiteStore
+
+    config = load_config(_project_root(args))
+    db = config.cache_dir / "facts.db"
+    if not db.is_file():
+        raise ConfigError(f"no facts in {db}: run carma index first")
+    with SQLiteStore(db) as store:
+        if not store.stats().files:
+            raise ConfigError(f"no facts in {db}: run carma index first")
+        core = Core(config, store)
+        try:
+            state = core.load()
+            if not args.no_watch:
+                core.watch_model()
+            url = f"http://{args.host}:{args.port}"
+            print(f"carma serve {config.project_root}")
+            print(f"  model             {len(state.model.components)} components, {len(state.issues)} issues")
+            built = (UI_DIR / "index.html").is_file()
+            print(f"  map               {url}" + ("" if built else "  (the UI is not built: npm ci && npm run build in ui/)"))
+            print(f"  api               {url}{PREFIX}")
+            print("  stop              Ctrl+C", flush=True)
+            if args.open:
+                threading.Timer(1.0, webbrowser.open, [url]).start()
+            # an open event stream would otherwise hold Ctrl+C until the browser disconnects
+            uvicorn.run(create_app(core), host=args.host, port=args.port, log_level="warning",
+                        timeout_graceful_shutdown=2)
+        finally:
+            core.close()
+    return 0
+
+
+HANDLERS = {"index": _index, "init": _init, "check": _check, "serve": _serve}
 
 
 def main(argv: list[str] | None = None) -> int:

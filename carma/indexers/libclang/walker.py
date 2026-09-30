@@ -212,10 +212,18 @@ class _TuWalker:
             name = name.partition("<")[0]  # constructors of class templates: `basic_string<_Elem, ...>`
         return ids.escape(name) + tparams + "(" + ", ".join(params) + ")" + suffix + "."
 
+    @staticmethod
+    def _is_anonymous_member_field(c) -> bool:
+        """The unnamed field clang adds for an anonymous struct or union member: transparent, like the record."""
+        if c.kind != K.FIELD_DECL:
+            return False
+        decl = c.type.get_declaration()
+        return decl is not None and decl.kind in RECORD_KINDS and decl.is_anonymous_record_decl()
+
     def _build_id(self, c) -> str | None:
         if c.kind == K.MACRO_DEFINITION:
             return ids.SCHEME + ids.escape(c.spelling) + "!"
-        if c.kind not in SYMBOL_KINDS or self._is_transparent(c):
+        if c.kind not in SYMBOL_KINDS or self._is_transparent(c) or self._is_anonymous_member_field(c):
             return None
         parts: list[str] = []
         anonymous_namespace = False

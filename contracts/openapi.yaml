@@ -1,0 +1,1437 @@
+openapi: 3.1.0
+info:
+  title: CARMA View API
+  description: The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). Symbol IDs contain spaces, '/' and '#', so they always travel as the query parameter id.
+  version: '0.1'
+paths:
+  /api/v0/status:
+    get:
+      summary: Contract versions, fact statistics, platform, model counts
+      operationId: status_api_v0_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/view:
+    get:
+      summary: Nodes, edges, issues and pinned positions of one level
+      operationId: view_api_v0_view_get
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            default: root
+            title: Scope
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/View'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/components:
+    get:
+      summary: Component tree with symbol counts and issues
+      operationId: components_api_v0_components_get
+      parameters:
+        - name: parent
+          in: query
+          required: false
+          schema:
+            type: string
+            default: root
+            title: Parent
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentTree'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/components/{component_id}:
+    get:
+      summary: Component model, computed issues, interface symbols, incoming and outgoing edges
+      operationId: component_api_v0_components__component_id__get
+      parameters:
+        - name: component_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Component Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComponentCard'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/symbols/search:
+    get:
+      summary: Symbols by name
+      operationId: search_api_v0_symbols_search_get
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            title: Q
+        - name: kind
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: array
+                items:
+                  type: string
+              - type: 'null'
+            description: repeat for several kinds
+            title: Kind
+          description: repeat for several kinds
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 500
+            minimum: 1
+            default: 50
+            title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/symbols:
+    get:
+      summary: A symbol, its definition, component and editor link
+      operationId: symbol_api_v0_symbols_get
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolCard'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/symbols/callers:
+    get:
+      summary: Who calls the symbol
+      operationId: callers_api_v0_symbols_callers_get
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Id
+        - name: depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 10
+            minimum: 1
+            default: 1
+            title: Depth
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 1000
+            minimum: 1
+            default: 200
+            title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/symbols/callees:
+    get:
+      summary: What the symbol calls
+      operationId: callees_api_v0_symbols_callees_get
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Id
+        - name: depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 10
+            minimum: 1
+            default: 1
+            title: Depth
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 1000
+            minimum: 1
+            default: 200
+            title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/paths:
+    get:
+      summary: Shortest call chains between two symbols
+      operationId: paths_api_v0_paths_get
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            title: From
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            title: To
+        - name: max_depth
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 12
+            minimum: 1
+            default: 6
+            title: Max Depth
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 50
+            minimum: 1
+            default: 5
+            title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/edges/samples:
+    get:
+      summary: The refs an edge of a level is made of
+      operationId: samples_api_v0_edges_samples_get
+      parameters:
+        - name: src
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Src
+        - name: dst
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Dst
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            default: root
+            title: Scope
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 500
+            minimum: 1
+            default: 20
+            title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/layout/{scope}:
+    put:
+      summary: Save the pinned positions of one level
+      operationId: layout_api_v0_layout__scope__put
+      parameters:
+        - name: scope
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LayoutBody'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LayoutResult'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/events:
+    get:
+      summary: 'Server-sent events: facts_changed, model_changed, highlight_changed, reindex_progress'
+      operationId: events_api_v0_events_get
+      responses:
+        '200':
+          description: an event stream
+          content:
+            text/event-stream: {}
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CallEdge:
+      properties:
+        caller:
+          type: string
+          title: Caller
+        callee:
+          type: string
+          title: Callee
+        caller_name:
+          type: string
+          title: Caller Name
+        callee_name:
+          type: string
+          title: Callee Name
+        path:
+          type: string
+          title: Path
+        line:
+          type: integer
+          title: Line
+          description: 1-based line of the first call
+        depth:
+          type: integer
+          title: Depth
+      additionalProperties: false
+      type: object
+      required:
+        - caller
+        - callee
+        - caller_name
+        - callee_name
+        - path
+        - line
+        - depth
+      title: CallEdge
+    CallList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/CallEdge'
+          type: array
+          title: Items
+        more:
+          type: boolean
+          title: More
+      additionalProperties: false
+      type: object
+      required:
+        - items
+        - more
+      title: CallList
+    ComponentCard:
+      properties:
+        id:
+          type: string
+          title: Id
+        parent:
+          type: string
+          title: Parent
+        children:
+          items:
+            type: string
+          type: array
+          title: Children
+        model:
+          additionalProperties: true
+          type: object
+          title: Model
+          description: the component file (contract 3) as JSON
+        symbols:
+          type: integer
+          title: Symbols
+        own_symbols:
+          type: integer
+          title: Own Symbols
+        issues:
+          items:
+            $ref: '#/components/schemas/Issue'
+          type: array
+          title: Issues
+        interface:
+          items:
+            $ref: '#/components/schemas/InterfaceSymbol'
+          type: array
+          title: Interface
+          description: provides and explicit symbols, else public header symbols
+        fingerprint:
+          type: string
+          title: Fingerprint
+          description: current interface fingerprint, as sync.fingerprint stores it
+        edges_out:
+          items:
+            $ref: '#/components/schemas/DependencyEdge'
+          type: array
+          title: Edges Out
+        edges_in:
+          items:
+            $ref: '#/components/schemas/DependencyEdge'
+          type: array
+          title: Edges In
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - parent
+        - children
+        - model
+        - symbols
+        - own_symbols
+        - issues
+        - interface
+        - fingerprint
+        - edges_out
+        - edges_in
+      title: ComponentCard
+    ComponentTree:
+      properties:
+        parent:
+          type: string
+          title: Parent
+        components:
+          items:
+            $ref: '#/components/schemas/TreeNode'
+          type: array
+          title: Components
+        unassigned:
+          type: integer
+          title: Unassigned
+          description: symbols in no component, shown as the _unassigned node at the top level
+      additionalProperties: false
+      type: object
+      required:
+        - parent
+        - components
+        - unassigned
+      title: ComponentTree
+    Contracts:
+      properties:
+        api:
+          type: string
+          title: Api
+        facts:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Facts
+          description: facts_version of the loaded fact stream
+        store:
+          type: string
+          title: Store
+        model:
+          type: string
+          title: Model
+        config:
+          type: string
+          title: Config
+        layout:
+          type: string
+          title: Layout
+      additionalProperties: false
+      type: object
+      required:
+        - api
+        - facts
+        - store
+        - model
+        - config
+        - layout
+      title: Contracts
+    Crumb:
+      properties:
+        scope:
+          type: string
+          title: Scope
+        name:
+          type: string
+          title: Name
+      additionalProperties: false
+      type: object
+      required:
+        - scope
+        - name
+      title: Crumb
+    DependencyEdge:
+      properties:
+        node:
+          type: string
+          title: Node
+          description: the other end, named as seen from the component's parent level
+        refs:
+          type: integer
+          title: Refs
+        calls:
+          type: integer
+          title: Calls
+        uses:
+          type: integer
+          title: Uses
+        declared:
+          type: boolean
+          title: Declared
+      additionalProperties: false
+      type: object
+      required:
+        - node
+        - refs
+        - calls
+        - uses
+        - declared
+      title: DependencyEdge
+    ErrorBody:
+      properties:
+        code:
+          type: string
+          title: Code
+          description: not_found, validation_failed or another machine-readable code
+        message:
+          type: string
+          title: Message
+        details:
+          items: {}
+          type: array
+          title: Details
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+        - code
+        - message
+      title: ErrorBody
+    ErrorResponse:
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorBody'
+      additionalProperties: false
+      type: object
+      required:
+        - error
+      title: ErrorResponse
+    FactsStatus:
+      properties:
+        files:
+          type: integer
+          title: Files
+        symbols:
+          type: integer
+          title: Symbols
+        refs:
+          type: integer
+          title: Refs
+        relations:
+          type: integer
+          title: Relations
+        facts_version:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Facts Version
+        platform:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Platform
+          description: 'OS the facts were indexed on: code under #ifdef for other OSes is not in them'
+        loaded_at:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Loaded At
+      additionalProperties: false
+      type: object
+      required:
+        - files
+        - symbols
+        - refs
+        - relations
+        - facts_version
+        - platform
+        - loaded_at
+      title: FactsStatus
+    InterfaceSymbol:
+      properties:
+        id:
+          type: string
+          title: Id
+        present:
+          type: boolean
+          title: Present
+          description: false when the anchor is not in the facts
+        name:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Name
+        kind:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Kind
+        signature:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Signature
+        path:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Path
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - present
+        - name
+        - kind
+        - signature
+        - path
+      title: InterfaceSymbol
+    Issue:
+      properties:
+        code:
+          type: string
+          enum:
+            - invalid_model
+            - broken_anchor
+            - ambiguous_membership
+            - empty
+            - stale
+            - missing_dependency
+            - undeclared_dependency
+            - cycle
+          title: Code
+        component:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Component
+        target:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Target
+        members:
+          items:
+            type: string
+          type: array
+          title: Members
+        scope:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Scope
+        symbols:
+          items:
+            type: string
+          type: array
+          title: Symbols
+        count:
+          type: integer
+          title: Count
+        message:
+          type: string
+          title: Message
+        text:
+          type: string
+          title: Text
+          description: one line for people
+      additionalProperties: false
+      type: object
+      required:
+        - code
+        - component
+        - target
+        - members
+        - scope
+        - symbols
+        - count
+        - message
+        - text
+      title: Issue
+    LayoutBody:
+      properties:
+        positions:
+          additionalProperties:
+            $ref: '#/components/schemas/Position'
+          type: object
+          title: Positions
+          description: node ID -> pinned position; an empty object unpins the level
+      additionalProperties: false
+      type: object
+      required:
+        - positions
+      title: LayoutBody
+    LayoutResult:
+      properties:
+        scope:
+          type: string
+          title: Scope
+        positions:
+          additionalProperties:
+            $ref: '#/components/schemas/Position'
+          type: object
+          title: Positions
+      additionalProperties: false
+      type: object
+      required:
+        - scope
+        - positions
+      title: LayoutResult
+    Location:
+      properties:
+        path:
+          type: string
+          title: Path
+        line:
+          type: integer
+          title: Line
+          description: 1-based line of the name
+        column:
+          type: integer
+          title: Column
+          description: 1-based column of the name, in UTF-8 bytes
+        end_line:
+          type: integer
+          title: End Line
+          description: 1-based last line of the whole declaration
+      additionalProperties: false
+      type: object
+      required:
+        - path
+        - line
+        - column
+        - end_line
+      title: Location
+    PathList:
+      properties:
+        paths:
+          items:
+            items:
+              type: string
+            type: array
+          type: array
+          title: Paths
+      additionalProperties: false
+      type: object
+      required:
+        - paths
+      title: PathList
+    Place:
+      properties:
+        scope:
+          type: string
+          title: Scope
+        node:
+          type: string
+          title: Node
+      additionalProperties: false
+      type: object
+      required:
+        - scope
+        - node
+      title: Place
+    Position:
+      properties:
+        x:
+          type: number
+          title: X
+        y:
+          type: number
+          title: Y
+      additionalProperties: false
+      type: object
+      required:
+        - x
+        - y
+      title: Position
+    RefList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/RefSample'
+          type: array
+          title: Items
+        more:
+          type: boolean
+          title: More
+      additionalProperties: false
+      type: object
+      required:
+        - items
+        - more
+      title: RefList
+    RefSample:
+      properties:
+        symbol:
+          type: string
+          title: Symbol
+        container:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Container
+        path:
+          type: string
+          title: Path
+        line:
+          type: integer
+          title: Line
+        column:
+          type: integer
+          title: Column
+        roles:
+          items:
+            type: string
+          type: array
+          title: Roles
+      additionalProperties: false
+      type: object
+      required:
+        - symbol
+        - container
+        - path
+        - line
+        - column
+        - roles
+      title: RefSample
+    Status:
+      properties:
+        version:
+          type: string
+          title: Version
+          description: carma package version
+        contracts:
+          $ref: '#/components/schemas/Contracts'
+        project_root:
+          type: string
+          title: Project Root
+        project_name:
+          type: string
+          title: Project Name
+        facts:
+          $ref: '#/components/schemas/FactsStatus'
+        components:
+          type: integer
+          title: Components
+        invalid_files:
+          items:
+            type: string
+          type: array
+          title: Invalid Files
+        issues:
+          type: integer
+          title: Issues
+        highlight:
+          type: boolean
+          title: Highlight
+      additionalProperties: false
+      type: object
+      required:
+        - version
+        - contracts
+        - project_root
+        - project_name
+        - facts
+        - components
+        - invalid_files
+        - issues
+        - highlight
+      title: Status
+    SymbolBrief:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          title: Kind
+        signature:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Signature
+        component:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Component
+          description: component ID, _unassigned or _external; null for namespaces
+        path:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Path
+          description: the file that decides membership
+        line:
+          anyOf:
+            - type: integer
+            - type: 'null'
+          title: Line
+        external:
+          type: boolean
+          title: External
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - signature
+        - component
+        - path
+        - line
+        - external
+      title: SymbolBrief
+    SymbolCard:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          title: Kind
+        signature:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Signature
+        doc:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Doc
+        access:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Access
+        parent:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Parent
+        external:
+          type: boolean
+          title: External
+        component:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Component
+        defs:
+          items:
+            $ref: '#/components/schemas/Location'
+          type: array
+          title: Defs
+        decls:
+          items:
+            $ref: '#/components/schemas/Location'
+          type: array
+          title: Decls
+        place:
+          anyOf:
+            - $ref: '#/components/schemas/Place'
+            - type: 'null'
+          description: the level and node that draw this symbol on the map
+        editor_uri:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Editor Uri
+          description: editor_uri from config.yaml filled with the definition
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - signature
+        - doc
+        - access
+        - parent
+        - external
+        - component
+        - defs
+        - decls
+        - place
+        - editor_uri
+      title: SymbolCard
+    SymbolList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SymbolBrief'
+          type: array
+          title: Items
+        more:
+          type: boolean
+          title: More
+          description: true when the list was cut at limit
+      additionalProperties: false
+      type: object
+      required:
+        - items
+        - more
+      title: SymbolList
+    TreeNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          enum:
+            - system
+            - subsystem
+            - component
+          title: Kind
+        lifecycle:
+          type: string
+          enum:
+            - current
+            - planned
+            - deprecated
+          title: Lifecycle
+        symbols:
+          type: integer
+          title: Symbols
+        own_symbols:
+          type: integer
+          title: Own Symbols
+        issues:
+          items:
+            type: string
+            enum:
+              - invalid_model
+              - broken_anchor
+              - ambiguous_membership
+              - empty
+              - stale
+              - missing_dependency
+              - undeclared_dependency
+              - cycle
+          type: array
+          title: Issues
+        children:
+          items:
+            $ref: '#/components/schemas/TreeNode'
+          type: array
+          title: Children
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - lifecycle
+        - symbols
+        - own_symbols
+        - issues
+        - children
+      title: TreeNode
+    View:
+      properties:
+        scope:
+          type: string
+          title: Scope
+        level:
+          type: string
+          enum:
+            - components
+            - symbols
+          title: Level
+        component:
+          type: string
+          title: Component
+          description: "'root' or the component whose children or symbols the level shows"
+        trail:
+          items:
+            $ref: '#/components/schemas/Crumb'
+          type: array
+          title: Trail
+          description: breadcrumbs from the root down to this level
+        nodes:
+          items:
+            $ref: '#/components/schemas/ViewNode'
+          type: array
+          title: Nodes
+        edges:
+          items:
+            $ref: '#/components/schemas/ViewEdge'
+          type: array
+          title: Edges
+        boundary:
+          items:
+            $ref: '#/components/schemas/ViewNode'
+          type: array
+          title: Boundary
+          description: neighbors outside the level that edges lead to, drawn pale
+        grouped_by:
+          anyOf:
+            - type: string
+              enum:
+                - file
+                - folder
+            - type: 'null'
+          title: Grouped By
+          description: set when the level had more than max_nodes nodes
+      additionalProperties: false
+      type: object
+      required:
+        - scope
+        - level
+        - component
+        - trail
+        - nodes
+        - edges
+        - boundary
+        - grouped_by
+      title: View
+    ViewEdge:
+      properties:
+        src:
+          type: string
+          title: Src
+        dst:
+          type: string
+          title: Dst
+        refs:
+          type: integer
+          title: Refs
+        calls:
+          type: integer
+          title: Calls
+        uses:
+          type: integer
+          title: Uses
+        declared:
+          type: boolean
+          title: Declared
+          description: the target is in requires of the source or of one of its ancestors
+        issues:
+          items:
+            type: string
+            enum:
+              - invalid_model
+              - broken_anchor
+              - ambiguous_membership
+              - empty
+              - stale
+              - missing_dependency
+              - undeclared_dependency
+              - cycle
+          type: array
+          title: Issues
+        metrics:
+          additionalProperties:
+            type: number
+          type: object
+          title: Metrics
+      additionalProperties: false
+      type: object
+      required:
+        - src
+        - dst
+        - refs
+        - calls
+        - uses
+        - declared
+        - issues
+        - metrics
+      title: ViewEdge
+    ViewNode:
+      properties:
+        id:
+          type: string
+          title: Id
+          description: component ID, '<id>._self', '_unassigned', symbol ID, 'file:<path>' or 'folder:<path>'
+        name:
+          type: string
+          title: Name
+        type:
+          type: string
+          enum:
+            - component
+            - self
+            - unassigned
+            - symbol
+            - file
+            - folder
+          title: Type
+        kind:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Kind
+          description: system, subsystem or component; for symbol nodes the symbol kind
+        lifecycle:
+          anyOf:
+            - type: string
+              enum:
+                - current
+                - planned
+                - deprecated
+            - type: 'null'
+          title: Lifecycle
+        intent_short:
+          type: string
+          title: Intent Short
+        symbols:
+          type: integer
+          title: Symbols
+          description: symbols inside the node, descendants included
+        children:
+          type: integer
+          title: Children
+          description: child components
+        file:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: File
+          description: 'symbol nodes and file groups: the file the node belongs to'
+        issues:
+          items:
+            type: string
+            enum:
+              - invalid_model
+              - broken_anchor
+              - ambiguous_membership
+              - empty
+              - stale
+              - missing_dependency
+              - undeclared_dependency
+              - cycle
+          type: array
+          title: Issues
+        pos:
+          anyOf:
+            - $ref: '#/components/schemas/Position'
+            - type: 'null'
+          description: position pinned in layout.json, else null
+        metrics:
+          additionalProperties:
+            type: number
+          type: object
+          title: Metrics
+          description: runtime metrics; empty in v0
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - kind
+        - lifecycle
+        - intent_short
+        - symbols
+        - children
+        - file
+        - issues
+        - pos
+        - metrics
+      title: ViewNode

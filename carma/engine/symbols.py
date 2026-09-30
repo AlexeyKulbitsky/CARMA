@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from carma.store.api import Symbol
+from carma.store.api import Loc, Symbol
 
 HEADER_SUFFIXES = (".h", ".hh", ".hpp", ".hxx", ".h++", ".inl", ".ipp", ".tpp", ".inc")
 TYPE_KINDS = frozenset({"class", "struct", "union", "enum", "type_alias", "concept"})
@@ -34,10 +34,15 @@ class SymbolInfo:
                    in_header=any(is_header(loc.path) for loc in (*s.defs, *s.decls)))
 
 
-def place_of(s: Symbol) -> str | None:
+def place_loc(s: Symbol) -> Loc | None:
     """The definition with the smallest path; without definitions, the declaration with the smallest path."""
     locs = s.defs or s.decls
-    return min(loc.path for loc in locs) if locs else None
+    return min(locs, key=lambda loc: (loc.path, loc.range)) if locs else None
+
+
+def place_of(s: Symbol) -> str | None:
+    loc = place_loc(s)
+    return loc.path if loc else None
 
 
 def top_symbol(sid: str, symbols: Mapping[str, SymbolInfo]) -> str:

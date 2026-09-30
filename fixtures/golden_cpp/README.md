@@ -14,7 +14,7 @@ A small CMake project that collects the cases that are hard to index. Contract t
 | Macro that generates a struct; macro that adds methods to a class (like `COMPONENT` in gd-engine) | `src/io/Handles.h`; `src/core/Component.h`, used in `Mesh.h` and `TextureStreamer.h` |
 | Same-named static functions in two `.cpp` files; anonymous-namespace function and variable | `Clamp` in `TextureStreamer.cpp` and `IoQueue.cpp`; `Normalize`, `g_uploaded` |
 | Two `main` in two targets | `apps/app_main.cpp`, `apps/tool_main.cpp` |
-| Anonymous union and struct; local struct and lambda in a function | `src/core/FrameStats.h`; `Renderer::DrawScene` |
+| Anonymous union and struct, and a field written through them (no ID for the unnamed members clang adds); local struct and lambda in a function | `src/core/FrameStats.h`; `Renderer::DrawScene` |
 | Field of a type from another subsystem (use edge from a class container) | `Renderer::m_streamer`, `TextureStreamer::m_lastHandle` |
 | Function address taken without a call | `std::atexit(&OnShutdown)` in `Renderer.cpp` |
 | Async hop through a task queue with a lambda (invisible to the call graph, expected) | `TextureStreamer::RequestLoad` → `IoQueue::Process` |
@@ -29,3 +29,4 @@ A small CMake project that collects the cases that are hard to index. Contract t
 - `relations.json` — inheritance and overrides.
 - `model/`, `config.yaml` — the model and config the core checks run with.
 - `checks.json` — issues `carma check` must report at the root level, and nothing else.
+- `view_root.json` — the answer of `GET /api/v0/view?scope=root`, with the refs behind every edge spelled out.

@@ -13,15 +13,22 @@ CARMA runs natively on Windows, macOS and Linux.
 
 ## Status
 
-Early development. The indexer works: `carma index` turns a CMake or `compile_commands.json` project into facts in SQLite (milestone M1). The core with the model (M2) is next.
+Early development. Working today:
+
+- `carma index` turns a CMake or `compile_commands.json` project into facts in SQLite (M1);
+- `carma init` writes the model skeleton from the folders, `carma check` reports undeclared dependencies, cycles and other model issues (M2);
+- `carma serve` serves the View API and the map: one level at a time, drill-down, search, symbol panel, open in editor (M3).
+
+The agent over MCP with highlighted routes (M4) is next.
 
 ## Development
 
-Requires [uv](https://docs.astral.sh/uv/) and CMake ≥ 3.20; the indexer also needs LLVM ≥ 19.
+Requires [uv](https://docs.astral.sh/uv/) and CMake ≥ 3.20; the indexer also needs LLVM ≥ 19. The UI needs Node 24 for development only.
 
 ```
 uv sync
 uv run pytest
+cd ui && npm ci && npm test && npm run build
 ```
 
 ## License

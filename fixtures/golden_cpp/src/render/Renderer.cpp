@@ -24,6 +24,9 @@ void Renderer::DrawScene() {
     };
     std::for_each(m_items.begin(), m_items.end(), drawOne);
     ++m_stats.frame;
+    // Through the anonymous union and struct: a reference to FrameStats#cpuMs, and no ID for
+    // the unnamed fields clang creates for them.
+    m_stats.cpuMs = 0.0f;
 
     m_streamer.RequestLoad("sky.dds");
 

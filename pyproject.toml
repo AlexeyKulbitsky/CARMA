@@ -8,8 +8,10 @@ license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "clang>=21",
+    "fastapi>=0.115",
     "jsonschema>=4.23",
     "ruamel.yaml>=0.18",
+    "uvicorn>=0.30",
     "watchfiles>=1.0",
 ]
 
@@ -18,6 +20,7 @@ carma = "carma.cli:main"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13",
     "pytest>=8",
 ]
 
@@ -27,6 +30,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["carma"]
+# The map built by `npm run build` in ui/: ignored by git, shipped in the wheel when present.
+artifacts = ["carma/_ui/**"]
 
 # Contract files live in contracts/ at the repo root; installed builds carry a copy.
 [tool.hatch.build.targets.wheel.force-include]
@@ -35,5 +40,5 @@ packages = ["carma"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "e2e: needs external tools such as CMake and a C++ compiler",
+    "e2e: end-to-end runs of the CLI; some need CMake, LLVM and a C++ compiler",
 ]

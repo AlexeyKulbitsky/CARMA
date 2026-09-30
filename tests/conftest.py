@@ -1,5 +1,6 @@
 import os
 import shutil
+import socket
 import subprocess
 from pathlib import Path
 
@@ -101,3 +102,10 @@ def golden_core(golden_project):
     yield core
     core.close()
     store.close()
+
+
+@pytest.fixture
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]

@@ -24,3 +24,6 @@ ui/dist/
 .vs/
 .vscode/
 .idea/
+
+# Built UI (npm run build in ui/); the wheel picks it up as an artifact
+carma/_ui/

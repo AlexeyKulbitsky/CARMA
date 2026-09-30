@@ -13,6 +13,7 @@ from carma.model.files import write_atomic
 
 CARMA_DIR = ".carma"
 CONFIG_FILE = "config.yaml"
+SCHEMA_VERSION = "config/0.1"
 
 DEFAULT_IGNORE = ("**/third_party/**", "**/thirdparty/**", "**/external/**", "build/**", "out/**")
 DEFAULT_EDITOR_URI = "vscode://file/{abs_path}:{line}"
@@ -45,6 +46,18 @@ class Config:
     @property
     def cache_dir(self) -> Path:
         return self.carma_dir / "cache"
+
+    def editor_link(self, path: str, line: int) -> str:
+        """editor_uri with {abs_path} (absolute, '/' separators) and {line} (1-based) filled in.
+
+        A '/' right before {abs_path} is not doubled: 'vscode://file/{abs_path}' works for both
+        'C:/src/a.cpp' and '/home/me/src/a.cpp'.
+        """
+        absolute = (self.project_root / path).as_posix()
+        template = self.editor_uri
+        if absolute.startswith("/") and "/{abs_path}" in template:
+            template = template.replace("/{abs_path}", "{abs_path}")
+        return template.replace("{abs_path}", absolute).replace("{line}", str(line))
 
 
 def find_project_root(start: Path) -> Path:
@@ -88,7 +101,7 @@ def load_config(project_root: Path) -> Config:
 GITIGNORE = "cache/\n"
 
 _CONFIG_TEMPLATE = """\
-schema_version: config/0.1
+schema_version: {schema_version}
 compile_db:
 {compile_db}
 indexer:
@@ -132,6 +145,7 @@ def write_config(project_root: Path, compile_db: dict, source_roots: list[str]) 
         block = (f"  cmake_build_dir: {json.dumps(compile_db['cmake_build_dir'])}    # read through the CMake File API\n"
                  f"  configuration: {json.dumps(compile_db.get('configuration', 'Debug'))}    # for multi-config generators")
     text = _CONFIG_TEMPLATE.format(
+        schema_version=SCHEMA_VERSION,
         compile_db=block,
         source_roots=json.dumps(source_roots),
         source_roots_note="" if source_roots else "                # empty: the skeleton starts at the project root",

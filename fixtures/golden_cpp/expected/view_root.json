@@ -1,0 +1,47 @@
+{
+  "$comment": "Hand-written. GET /api/v0/view?scope=root with expected/model. Keys starting with $ and node positions are not compared. Symbol counts leave out platform-only symbols from symbols.json: on facts indexed on Windows, io also has WindowsDriveRoot.",
+  "$edges": {
+    "apps -> io": "app_main.cpp: IoQueue type, queue.Process(); tool_main.cpp: IoQueue type, RingBuffer template twice, sizes.Push, queue.Read, PlatformRoot, flags.Push, sizes.Size, flags.Size",
+    "apps -> render": "app_main.cpp: Renderer type and its constructor, Mesh type (render.backend), renderer.Add, renderer.DrawScene",
+    "apps -> streaming": "app_main.cpp: TextureStreamer type and its constructor, streamer.Pending",
+    "render -> core": "Renderer.h: FrameStats field type; Renderer.cpp: m_stats.frame, m_stats.cpuMs; Mesh.h: Component base, GOLDEN_COMPONENT expansion, Component and StaticTypeId<T> call in the generated TypeId",
+    "render -> streaming": "Renderer.h: TextureStreamer in the constructor declaration and the m_streamer field; Renderer.cpp: TextureStreamer in the constructor definition, m_streamer.RequestLoad",
+    "streaming -> core": "TextureStreamer.h: Component base, GOLDEN_COMPONENT expansion, Component and StaticTypeId<T> call in the generated TypeId",
+    "streaming -> io": "TextureStreamer.h: IoQueue in the constructor declaration and the m_queue field, FileHandle field; TextureStreamer.cpp: IoQueue in the constructor definition, m_lastHandle.id, m_queue.Submit",
+    "streaming -> render": "TextureStreamer.cpp: GpuUploader type and the GpuUploader::Upload call (render.backend): the undeclared dependency that closes the cycle"
+  },
+  "scope": "root",
+  "level": "components",
+  "component": "root",
+  "trail": [{ "scope": "root", "name": "root" }],
+  "nodes": [
+    { "id": "apps", "name": "Apps", "type": "component", "kind": "subsystem", "lifecycle": "current",
+      "intent_short": "Executables that wire the subsystems together.", "symbols": 1, "children": 0, "file": null,
+      "issues": [], "pos": null, "metrics": {} },
+    { "id": "core", "name": "Core", "type": "component", "kind": "subsystem", "lifecycle": "current",
+      "intent_short": "Component base class and shared frame data.", "symbols": 11, "children": 0, "file": null,
+      "issues": [], "pos": null, "metrics": {} },
+    { "id": "io", "name": "IO", "type": "component", "kind": "subsystem", "lifecycle": "current",
+      "intent_short": "Task queue and file reads.", "symbols": 25, "children": 0, "file": null,
+      "issues": [], "pos": null, "metrics": {} },
+    { "id": "render", "name": "Render", "type": "component", "kind": "subsystem", "lifecycle": "current",
+      "intent_short": "Draws the scene and requests textures.", "symbols": 24, "children": 1, "file": null,
+      "issues": [], "pos": null, "metrics": {} },
+    { "id": "streaming", "name": "Streaming", "type": "component", "kind": "subsystem", "lifecycle": "current",
+      "intent_short": "Loads textures asynchronously through the IO queue.", "symbols": 11, "children": 0, "file": null,
+      "issues": [], "pos": null, "metrics": {} }
+  ],
+  "edges": [
+    { "src": "apps", "dst": "io", "refs": 11, "calls": 7, "uses": 4, "declared": false, "issues": [], "metrics": {} },
+    { "src": "apps", "dst": "render", "refs": 5, "calls": 3, "uses": 2, "declared": false, "issues": [], "metrics": {} },
+    { "src": "apps", "dst": "streaming", "refs": 3, "calls": 2, "uses": 1, "declared": false, "issues": [], "metrics": {} },
+    { "src": "render", "dst": "core", "refs": 7, "calls": 1, "uses": 3, "declared": true, "issues": [], "metrics": {} },
+    { "src": "render", "dst": "streaming", "refs": 4, "calls": 1, "uses": 3, "declared": true, "issues": ["cycle"], "metrics": {} },
+    { "src": "streaming", "dst": "core", "refs": 4, "calls": 1, "uses": 2, "declared": true, "issues": [], "metrics": {} },
+    { "src": "streaming", "dst": "io", "refs": 6, "calls": 1, "uses": 4, "declared": true, "issues": [], "metrics": {} },
+    { "src": "streaming", "dst": "render", "refs": 2, "calls": 1, "uses": 1, "declared": false,
+      "issues": ["undeclared_dependency", "cycle"], "metrics": {} }
+  ],
+  "boundary": [],
+  "grouped_by": null
+}

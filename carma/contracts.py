@@ -45,6 +45,14 @@ def validation_errors(name: str, instance: object) -> list[str]:
     return [f"{'/'.join(map(str, e.absolute_path)) or '<root>'}: {e.message}" for e in errors]
 
 
+@cache
+def load_openapi() -> dict:
+    """Contract 4: contracts/openapi.yaml, generated from carma/api and committed."""
+    from carma.model import yaml_io
+
+    return yaml_io.to_plain(yaml_io.load(contracts_dir() / "openapi.yaml"))
+
+
 _TOOL_ROW = re.compile(r"^\|\s*`([a-z_]+)`\s*\|")
 
 

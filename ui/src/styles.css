@@ -1,0 +1,152 @@
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --line: #d6d8dc;
+  --card: #ffffff;
+  --card-self: #f1f4f9;
+  --accent: #2f6fdb;
+  --edge: #9aa3ad;
+  --edge-declared: #4b8a5e;
+  --edge-undeclared: #d1432f;
+  --edge-cycle: #d48a12;
+  --issue-bg: #fde8e4;
+  --issue-text: #9b2c1a;
+  --planned: #7c5cc4;
+  --deprecated: #8a8f98;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --panel: #1c1f24;
+    --text: #e6e8eb;
+    --muted: #9aa1ab;
+    --line: #353a42;
+    --card: #22262c;
+    --card-self: #1f2833;
+    --accent: #6ea0ff;
+    --edge: #6b7480;
+    --edge-declared: #6fb383;
+    --edge-undeclared: #f06a55;
+    --edge-cycle: #f0a93c;
+    --issue-bg: #4a211b;
+    --issue-text: #ffb4a6;
+    --planned: #a88bf0;
+    --deprecated: #7d838c;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+
+.app { display: flex; flex-direction: column; height: 100%; }
+.top {
+  display: flex; align-items: center; gap: 16px; padding: 8px 16px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.main { flex: 1; display: flex; min-height: 0; }
+.main.loading .graph { opacity: 0.6; }
+.graph { flex: 1; position: relative; min-width: 0; }
+.panel {
+  width: 360px; flex: none; overflow: auto; background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+.panel-body { padding: 16px; }
+.panel h2 { font-size: 17px; margin: 0 0 4px; word-break: break-word; }
+.panel h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.panel section { margin-top: 8px; }
+.intent { white-space: pre-wrap; }
+.code, .doc { background: var(--bg); padding: 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.count { font-weight: normal; }
+.error { color: var(--edge-undeclared); }
+ul.plain { list-style: none; padding: 0; margin: 0; }
+ul.plain li { padding: 3px 0; word-break: break-word; }
+.issue { color: var(--issue-text); }
+
+.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; min-width: 0; flex: 1; }
+.crumb .sep { margin: 0 6px; color: var(--muted); }
+.link {
+  background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-align: left;
+}
+.link:hover { text-decoration: underline; }
+.button {
+  display: inline-block; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); cursor: pointer; font: inherit; text-decoration: none; margin: 6px 0;
+}
+.button:hover:not(:disabled) { border-color: var(--accent); }
+.button:disabled { opacity: 0.5; cursor: default; }
+
+.search { position: relative; width: 340px; }
+.search input {
+  width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.results {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 10; margin: 4px 0 0; padding: 4px 0; list-style: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; max-height: 60vh; overflow: auto;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+.results button {
+  width: 100%; text-align: left; background: none; border: 0; padding: 6px 10px; color: var(--text); cursor: pointer; font: inherit;
+}
+.results button:hover { background: var(--bg); }
+.result-name { font-weight: 600; }
+
+.toolbar { display: flex; align-items: center; gap: 12px; }
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.segmented button { background: var(--card); color: var(--text); border: 0; padding: 5px 10px; cursor: pointer; font: inherit; }
+.segmented button.on { background: var(--accent); color: #fff; }
+.threshold { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+
+.banner { padding: 6px 16px; font-size: 13px; }
+.banner-error { background: var(--issue-bg); color: var(--issue-text); }
+.graph .banner { position: absolute; z-index: 5; left: 0; right: 0; }
+
+.card {
+  width: 220px; height: 100%; padding: 8px 10px; border-radius: 8px; overflow: hidden;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.card-self, .card-unassigned { background: var(--card-self); }
+.card-unassigned { border-style: dotted; }
+.card-symbol, .card-file, .card-folder { padding: 6px 10px; }
+.card-boundary { opacity: 0.45; }
+.card-planned { border: 2px dashed var(--planned); }
+.card-deprecated { border-color: var(--deprecated); }
+.card-deprecated .card-name { text-decoration: line-through; }
+.card-focused { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.card-head { display: flex; align-items: baseline; gap: 6px; }
+.card-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta, .card-intent { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-intent { color: var(--text); margin-top: 2px; }
+.card-issues { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+.badge {
+  display: inline-block; font-size: 10.5px; line-height: 1.5; padding: 0 6px; border-radius: 9px; margin-left: 4px;
+  background: var(--bg); color: var(--muted); white-space: nowrap;
+}
+.card-issues .badge { margin-left: 0; }
+.badge-issue { background: var(--issue-bg); color: var(--issue-text); }
+.badge-planned { color: var(--planned); }
+.handle { opacity: 0; pointer-events: none; }
+
+.react-flow__edge.edge .react-flow__edge-path { stroke: var(--edge); }
+.react-flow__edge.edge-declared .react-flow__edge-path { stroke: var(--edge-declared); }
+.react-flow__edge.edge-cycle .react-flow__edge-path { stroke: var(--edge-cycle); }
+.react-flow__edge.edge-undeclared .react-flow__edge-path { stroke: var(--edge-undeclared); }
+.react-flow__edge.edge-boundary { opacity: 0.45; }
+.react-flow__edge.selected .react-flow__edge-path { filter: drop-shadow(0 0 2px var(--accent)); }
+.react-flow__edge-text { font-size: 10px; fill: var(--muted); }
+.react-flow__edge-textbg { fill: var(--bg); }
+.react-flow__background { background: var(--bg); }
+.minimap { background: var(--panel); }

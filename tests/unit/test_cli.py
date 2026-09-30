@@ -6,7 +6,7 @@ from carma import __version__
 from carma.cli import COMMANDS, main
 from carma.config import load_config
 
-IMPLEMENTED = {"index", "init", "check"}
+IMPLEMENTED = {"index", "init", "check", "serve"}
 
 
 def test_version(capsys):

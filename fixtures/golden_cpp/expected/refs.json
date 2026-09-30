@@ -25,6 +25,7 @@
   ],
   "references": [
     { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/render/OnShutdown().", "at": "src/render/Renderer.cpp", "note": "address taken, not called" },
+    { "from": "cxx golden/render/Renderer#DrawScene().", "to": "cxx golden/core/FrameStats#cpuMs.", "at": "src/render/Renderer.cpp", "note": "field inside an anonymous union and struct" },
     { "from": "cxx golden/render/Renderer#", "to": "cxx golden/streaming/TextureStreamer#", "at": "src/render/Renderer.h", "note": "field type: class container" },
     { "from": "cxx golden/render/Renderer#", "to": "cxx golden/core/FrameStats#", "at": "src/render/Renderer.h", "note": "field type: class container" },
     { "from": "cxx golden/streaming/TextureStreamer#", "to": "cxx golden/io/FileHandle#", "at": "src/streaming/TextureStreamer.h", "note": "field type: class container" },
