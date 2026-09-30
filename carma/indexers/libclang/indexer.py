@@ -38,6 +38,8 @@ class TuReport:
 class IndexReport:
     libclang: discovery.LibclangInfo
     out_path: Path
+    resource_dir: Path | None = None
+    sysroot: str | None = None
     tus: list[TuReport] = field(default_factory=list)
     symbols: int = 0
     refs: int = 0
@@ -114,8 +116,14 @@ def index_project(
     root = root.resolve()
     info = discovery.load(libclang)
     started = time.perf_counter()
+    builtin = discovery.resource_dir(info)
+    sdk = discovery.macos_sdk()
     tasks = sorted(
-        ((str(cmd.file), relpath(cmd.file, root) or cmd.file.name, libclang_args(cmd), str(cmd.directory)) for cmd in commands),
+        (
+            (str(cmd.file), relpath(cmd.file, root) or cmd.file.name,
+             libclang_args(cmd, resource_dir=str(builtin) if builtin else None, sysroot=sdk), str(cmd.directory))
+            for cmd in commands
+        ),
         key=lambda t: t[1],
     )
     jobs = max(1, min(jobs or os.cpu_count() or 1, len(tasks) or 1))
@@ -124,7 +132,7 @@ def index_project(
     refs: dict[tuple, set[str]] = {}
     relations: set[tuple[str, str, str]] = set()
     files: set[str] = set()
-    report = IndexReport(libclang=info, out_path=out_path)
+    report = IndexReport(libclang=info, out_path=out_path, resource_dir=builtin, sysroot=sdk)
 
     def consume(result: dict) -> None:
         report.tus.append(TuReport(result["tu"], result["errors"], result["messages"], result["parse_s"],

@@ -98,6 +98,8 @@ def _reply(build_dir: Path) -> tuple[Path, dict, dict]:
 def _pick_configuration(codemodel: dict, wanted: str | None) -> dict:
     configurations = codemodel["configurations"]
     names = [c["name"] for c in configurations]
+    if len(configurations) == 1:
+        return configurations[0]  # single-config generators (Makefiles, Ninja): the setting does not apply
     if wanted:
         for c in configurations:
             if c["name"] == wanted:

@@ -106,3 +106,14 @@ def test_unknown_configuration(tmp_path):
     write_reply(tmp_path / "build", tmp_path, "/usr/bin/c++", "")
     with pytest.raises(CompileDbError, match="RelWithDebInfo"):
         from_cmake_build(tmp_path / "build", "RelWithDebInfo", reconfigure=False)
+
+
+def test_single_config_generator_ignores_the_configuration(tmp_path):
+    """Makefiles and Ninja have one unnamed configuration; `configuration: Debug` must not fail there."""
+    source, build = tmp_path / "src_root", tmp_path / "build"
+    write_reply(build, source, "/usr/bin/c++", "")
+    codemodel_path = build / ".cmake" / "api" / "v1" / "reply" / "codemodel-v2-1.json"
+    codemodel = json.loads(codemodel_path.read_text(encoding="utf-8"))
+    codemodel["configurations"] = [{"name": "", "targets": codemodel["configurations"][1]["targets"]}]
+    codemodel_path.write_text(json.dumps(codemodel), encoding="utf-8")
+    assert len(from_cmake_build(build, "Debug", reconfigure=False)) == 1

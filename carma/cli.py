@@ -70,6 +70,12 @@ def _index(args) -> int:
         if interactive:
             print(f"\r  indexing          {done}/{total}", end="", file=sys.stderr, flush=True)
 
+    builtin = discovery.resource_dir(info)
+    print(f"  builtin headers   {builtin or 'not found; libclang will guess'}")
+    sdk = discovery.macos_sdk()
+    if sdk:
+        print(f"  macOS SDK         {sdk}")
+
     facts = config.cache_dir / "facts.jsonl"
     report = index_project(root, tus, facts, libclang=library, ignore=config.ignore, jobs=args.jobs, progress=progress)
     if interactive:

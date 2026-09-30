@@ -68,7 +68,8 @@ def test_every_record_matches_the_schema(facts):
 
 def test_no_parse_errors(adapter_run):
     report, _ = adapter_run
-    assert [(t.path, t.messages) for t in report.tus_with_errors] == []
+    setup = f"libclang {report.libclang.path}, builtin headers {report.resource_dir}, sysroot {report.sysroot}"
+    assert [(t.path, t.messages) for t in report.tus_with_errors] == [], setup
 
 
 def test_expected_symbols(expected, symbols):

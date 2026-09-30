@@ -31,3 +31,14 @@ def test_source_file_matched_by_path_not_by_name(tmp_path):
     other = str(Path("other") / "a.cpp")
     cmd = command(tmp_path, "clang++", "-include", other, "src/a.cpp")
     assert libclang_args(cmd) == ["-include", other]
+
+
+def test_resource_dir_and_sysroot(tmp_path):
+    cmd = command(tmp_path, "/usr/bin/c++", "-std=c++20", "-c", "src/a.cpp")
+    assert libclang_args(cmd, resource_dir="/llvm/lib/clang/21", sysroot="/sdk") == [
+        "-std=c++20", "-resource-dir", "/llvm/lib/clang/21", "-isysroot", "/sdk"]
+
+
+def test_sysroot_from_the_command_wins(tmp_path):
+    cmd = command(tmp_path, "/usr/bin/c++", "-isysroot", "/own/sdk", "-c", "src/a.cpp")
+    assert libclang_args(cmd, sysroot="/sdk") == ["-isysroot", "/own/sdk"]

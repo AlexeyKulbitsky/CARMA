@@ -34,8 +34,15 @@ def _expand_response_files(args: list[str], directory: Path, windows: bool) -> l
     return result
 
 
-def libclang_args(cmd: CompileCommand) -> list[str]:
-    """Arguments for clang_parseTranslationUnit: no compiler name, no source file, no output flags."""
+_SYSROOT_FLAGS = ("-isysroot", "--sysroot", "/winsysroot", "-winsysroot")
+
+
+def libclang_args(cmd: CompileCommand, *, resource_dir: str | None = None, sysroot: str | None = None) -> list[str]:
+    """Arguments for clang_parseTranslationUnit: no compiler name, no source file, no output flags.
+
+    resource_dir points libclang at its builtin headers; sysroot is added only when the
+    command has none (macOS SDK).
+    """
     cl = cmd.cl_mode
     raw = _expand_response_files(list(cmd.arguments[1:]), cmd.directory, windows=os.name == "nt")
     file_key = norm_abs(cmd.file)
@@ -62,4 +69,8 @@ def libclang_args(cmd: CompileCommand) -> list[str]:
         out.append(arg)
     if cl and not any(a.startswith("--driver-mode=") for a in out):
         out.insert(0, "--driver-mode=cl")
+    if resource_dir:
+        out += ["-resource-dir", resource_dir]
+    if sysroot and not any(a.startswith(_SYSROOT_FLAGS) for a in out):
+        out += ["-isysroot", sysroot]
     return out

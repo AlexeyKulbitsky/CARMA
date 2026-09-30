@@ -162,6 +162,47 @@ def load(path: Path) -> LibclangInfo:
     return _loaded
 
 
+def resource_dir(info: LibclangInfo) -> Path | None:
+    """clang's builtin headers (stddef.h, intrinsics) of the same LLVM installation.
+
+    libclang is supposed to find them itself, but the official Linux build of LLVM 21 does not,
+    so the adapter always passes -resource-dir explicitly when it can find the folder.
+    """
+    lib_dir = info.path.resolve().parent
+    prefix = lib_dir.parent
+    for base in (prefix / "lib", prefix / "lib64", lib_dir):
+        for version in (str(info.major), info.number):
+            folder = base / "clang" / version
+            if (folder / "include" / "stddef.h").is_file():
+                return folder
+    clang = prefix / "bin" / ("clang.exe" if sys.platform == "win32" else "clang")
+    if clang.is_file():
+        try:
+            out = subprocess.run([str(clang), "-print-resource-dir"], capture_output=True, text=True, check=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        folder = Path(out.stdout.strip())
+        if (folder / "include" / "stddef.h").is_file():
+            return folder
+    return None
+
+
+_sdk: str | None = None
+
+
+def macos_sdk() -> str | None:
+    """SDK path for the standard headers on macOS; CMake 4 no longer puts -isysroot into commands."""
+    global _sdk
+    if sys.platform != "darwin":
+        return None
+    if _sdk is None:
+        try:
+            _sdk = subprocess.run(["xcrun", "--show-sdk-path"], capture_output=True, text=True, check=True, timeout=30).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            _sdk = ""
+    return _sdk or None
+
+
 def version_warning(info: LibclangInfo) -> str | None:
     if "Apple" in info.version:
         return None  # Apple numbers its clang differently; parsing problems show up as diagnostics
