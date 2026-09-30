@@ -1,0 +1,3 @@
+# LF everywhere: fixture sources and fact streams must be byte-identical on every OS.
+* text=auto eol=lf
+*.bat text eol=crlf

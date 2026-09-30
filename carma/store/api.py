@@ -96,13 +96,17 @@ class StoreStats:
 
 
 class LoadSession(Protocol):
-    """One load of a fact stream; nothing is visible to readers until commit()."""
+    """One load of a fact stream; nothing is visible to readers until commit().
+
+    Symbols are upserted by ID and keep the locations of files that are not reloaded.
+    Every session receives the complete set of relations, which replaces the stored one.
+    """
 
     def put(self, record: dict) -> None:
-        """Add one contract-1 record (file, symbol, ref or relation)."""
+        """Add one contract-1 record (file, symbol, ref or relation). A file record may carry `load_hash`."""
 
     def delete_file(self, path: str) -> None:
-        """Drop refs and symbol locations in this file before it is loaded again."""
+        """Drop the file, its refs and the symbol locations in it before it is loaded again."""
 
     def commit(self) -> None:
         """Make the load visible and remove orphaned symbols."""
@@ -114,7 +118,9 @@ class FactStore(Protocol):
 
     # loading
     def begin_load(self, header: FactsHeader) -> LoadSession: ...
-    def file_hashes(self) -> dict[str, str]: ...
+    def file_hashes(self) -> dict[str, str]:
+        """Per file, the hash the loader recorded: content hash plus a digest of the facts located in it."""
+        ...
 
     # lookup
     def get_symbol(self, id: str) -> Symbol | None: ...

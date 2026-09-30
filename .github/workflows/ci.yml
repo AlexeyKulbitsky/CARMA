@@ -11,10 +11,19 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # tests that need LLVM and CMake fail here instead of being skipped
+      CARMA_REQUIRE_LIBCLANG: "1"
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v6
+
+      # The same LLVM on every OS, so canonical IDs can be compared across OSes.
+      # The action sets LLVM_PATH, which the libclang discovery checks first.
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "21.1.8"
 
       - name: Install dependencies
         run: uv sync --locked

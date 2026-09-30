@@ -13,11 +13,11 @@ CARMA runs natively on Windows, macOS and Linux.
 
 ## Status
 
-Early development. Milestone M0 (skeleton, contracts, reference project) is done; the indexer (M1) is next.
+Early development. The indexer works: `carma index` turns a CMake or `compile_commands.json` project into facts in SQLite (milestone M1). The core with the model (M2) is next.
 
 ## Development
 
-Requires [uv](https://docs.astral.sh/uv/) and CMake ≥ 3.20; the indexer (from M1) also needs LLVM ≥ 19.
+Requires [uv](https://docs.astral.sh/uv/) and CMake ≥ 3.20; the indexer also needs LLVM ≥ 19.
 
 ```
 uv sync
