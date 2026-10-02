@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ViewEdge } from "../api/client";
-import { cycleGroups, edgeTone, edgeWidth, MAX_WIDTH, maxMetric, visibleEdges } from "./edges";
+import { cycleGroups, edgeTone, edgeWidth, initialThreshold, MAX_WIDTH, maxMetric, visibleEdges } from "./edges";
 
 const edge = (src: string, dst: string, refs: number, extra: Partial<ViewEdge> = {}): ViewEdge => ({
   src, dst, refs, calls: 0, uses: refs, declared: false, issues: [], metrics: {}, ...extra,
@@ -22,6 +22,13 @@ describe("edges", () => {
     expect(visibleEdges(edges, "uses", 1, null).map((e) => e.src)).toEqual(["a", "b"]);
     expect(visibleEdges(edges, "refs", 1, "b").map((e) => `${e.src}${e.dst}`)).toEqual(["ab", "bc"]);
     expect(maxMetric(edges, "refs")).toBe(5);
+  });
+
+  it("starts dense levels with their strongest connections and leaves small levels unfiltered", () => {
+    const edges = [1, 2, 3, 4, 5].map((refs, index) => edge(String(index), "target", refs));
+    expect(initialThreshold(edges, "refs", 2)).toBe(4);
+    expect(visibleEdges(edges, "refs", 4, null)).toHaveLength(2);
+    expect(initialThreshold(edges, "refs", 5)).toBe(1);
   });
 
   it("colors by the most serious issue", () => {

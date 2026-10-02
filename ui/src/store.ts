@@ -2,11 +2,11 @@
 import { create } from "zustand";
 
 import { api, ApiError, type ComponentTree, type Position, type Status, type View } from "./api/client";
-import type { Metric } from "./graph/edges";
+import { initialThreshold, metricThresholds, type Metric } from "./graph/edges";
 import { hashForScope, ROOT, scopeFromHash } from "./nav";
 
 export type Selection =
-  | { kind: "node"; id: string; symbol?: string }
+  | { kind: "node"; id: string; symbol?: string; reveal?: boolean }
   | { kind: "edge"; src: string; dst: string }
   | null;
 
@@ -57,11 +57,16 @@ export const useMap = create<MapState>()((set, get) => ({
 
   async open(scope) {
     const id = ++request;
-    set({ scope, loading: true, error: null });
+    const previousScope = get().view?.scope;
+    set({ scope, loading: true, error: null,
+      ...(previousScope !== scope ? { view: null, selection: null } : {}) });
     try {
       const view = await api.view(scope);
       if (id !== request) return;
-      set({ view, loading: false, selection: get().pendingSelection, pendingSelection: null, threshold: 1 });
+      const choices = metricThresholds(view.edges, get().metric);
+      const preserved = choices.find((value) => value >= get().threshold) ?? choices.at(-1)!;
+      set({ view, loading: false, selection: get().pendingSelection, pendingSelection: null,
+        threshold: previousScope === scope ? preserved : initialThreshold(view.edges, get().metric) });
     } catch (error) {
       if (id !== request) return;
       set({ loading: false, error: message(error), pendingSelection: null });
@@ -92,7 +97,7 @@ export const useMap = create<MapState>()((set, get) => ({
         set({ error: `${card.name} is not drawn on the map (${card.external ? "external" : "a namespace"})` });
         return;
       }
-      const selection: Selection = { kind: "node", id: card.place.node, symbol: id };
+      const selection: Selection = { kind: "node", id: card.place.node, symbol: id, reveal: true };
       if (card.place.scope === get().scope) set({ selection });
       else get().navigate(card.place.scope, selection);
     } catch (error) {
@@ -101,14 +106,16 @@ export const useMap = create<MapState>()((set, get) => ({
   },
 
   async refresh() {
+    let metadataError: string | null = null;
     const [status, tree] = await Promise.all([api.status(), api.components()]).catch((error) => {
-      set({ error: message(error) });
+      metadataError = message(error);
       return [null, null] as const;
     });
     if (status && tree) set({ status, tree });
     const { scope, selection } = get();
     set({ pendingSelection: selection });
     await get().open(scope);
+    if (metadataError) set((state) => ({ error: state.error ?? metadataError }));
   },
 
   select(selection) {
@@ -116,7 +123,7 @@ export const useMap = create<MapState>()((set, get) => ({
   },
 
   setMetric(metric) {
-    set({ metric, threshold: 1 });
+    set({ metric, threshold: initialThreshold(get().view?.edges ?? [], metric) });
   },
 
   setThreshold(threshold) {

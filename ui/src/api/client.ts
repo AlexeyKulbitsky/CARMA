@@ -5,6 +5,7 @@ type Schemas = components["schemas"];
 export type Status = Schemas["Status"];
 export type View = Schemas["View"];
 export type ViewNode = Schemas["ViewNode"];
+export type ViewMember = Schemas["ViewMember"];
 export type ViewEdge = Schemas["ViewEdge"];
 export type Crumb = Schemas["Crumb"];
 export type ComponentTree = Schemas["ComponentTree"];
@@ -18,6 +19,7 @@ export type RefList = Schemas["RefList"];
 export type Position = Schemas["Position"];
 
 export const PREFIX = "/api/v0";
+export const API_VERSION = "api/0.2";
 
 export class ApiError extends Error {
   readonly status: number;

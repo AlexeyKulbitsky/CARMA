@@ -664,6 +664,22 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** ViewMember */
+        ViewMember: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @description field, variable, method, constructor, destructor or function
+             */
+            kind: string;
+            /** Signature */
+            signature: string | null;
+            /** Access */
+            access: string | null;
+        };
         /** ViewNode */
         ViewNode: {
             /**
@@ -713,6 +729,11 @@ export interface components {
             metrics: {
                 [key: string]: number;
             };
+            /**
+             * Members
+             * @description direct fields and methods of a class, struct or union; empty otherwise
+             */
+            members: components["schemas"]["ViewMember"][];
         };
     };
     responses: never;

@@ -21,6 +21,16 @@ export function maxMetric(edges: ViewEdge[], metric: Metric): number {
   return edges.reduce((max, e) => Math.max(max, e[metric]), 0);
 }
 
+export function metricThresholds(edges: ViewEdge[], metric: Metric): number[] {
+  return [...new Set([1, ...edges.map((edge) => edge[metric]).filter((value) => value > 0)])].sort((a, b) => a - b);
+}
+
+/** Start large levels with their strongest connections visible; the slider can reveal the rest. */
+export function initialThreshold(edges: ViewEdge[], metric: Metric, target = 24): number {
+  const values = edges.map((edge) => edge[metric]).filter((value) => value > 0).sort((a, b) => b - a);
+  return values.length > target ? values[target - 1] : 1;
+}
+
 export function edgeTone(edge: ViewEdge): EdgeTone {
   if (edge.issues.includes("undeclared_dependency")) return "undeclared";
   if (edge.issues.includes("cycle")) return "cycle";

@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-API_VERSION = "api/0.1"
+API_VERSION = "api/0.2"
 
 IssueCode = Literal["invalid_model", "broken_anchor", "ambiguous_membership", "empty", "stale", "missing_dependency",
                     "undeclared_dependency", "cycle"]
@@ -69,6 +69,14 @@ class Position(Model):
     y: float
 
 
+class ViewMember(Model):
+    id: str
+    name: str
+    kind: str = Field(description="field, variable, method, constructor, destructor or function")
+    signature: str | None
+    access: str | None
+
+
 class ViewNode(Model):
     id: str = Field(description="component ID, '<id>._self', '_unassigned', symbol ID, 'file:<path>' or 'folder:<path>'")
     name: str
@@ -82,6 +90,7 @@ class ViewNode(Model):
     issues: list[IssueCode]
     pos: Position | None = Field(description="position pinned in layout.json, else null")
     metrics: dict[str, float] = Field(description="runtime metrics; empty in v0")
+    members: list[ViewMember] = Field(description="direct fields and methods of a class, struct or union; empty otherwise")
 
 
 class ViewEdge(Model):

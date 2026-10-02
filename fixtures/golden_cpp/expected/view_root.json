@@ -17,19 +17,19 @@
   "nodes": [
     { "id": "apps", "name": "Apps", "type": "component", "kind": "subsystem", "lifecycle": "current",
       "intent_short": "Executables that wire the subsystems together.", "symbols": 1, "children": 0, "file": null,
-      "issues": [], "pos": null, "metrics": {} },
+      "issues": [], "pos": null, "metrics": {}, "members": [] },
     { "id": "core", "name": "Core", "type": "component", "kind": "subsystem", "lifecycle": "current",
       "intent_short": "Component base class and shared frame data.", "symbols": 11, "children": 0, "file": null,
-      "issues": [], "pos": null, "metrics": {} },
+      "issues": [], "pos": null, "metrics": {}, "members": [] },
     { "id": "io", "name": "IO", "type": "component", "kind": "subsystem", "lifecycle": "current",
       "intent_short": "Task queue and file reads.", "symbols": 25, "children": 0, "file": null,
-      "issues": [], "pos": null, "metrics": {} },
+      "issues": [], "pos": null, "metrics": {}, "members": [] },
     { "id": "render", "name": "Render", "type": "component", "kind": "subsystem", "lifecycle": "current",
       "intent_short": "Draws the scene and requests textures.", "symbols": 24, "children": 1, "file": null,
-      "issues": [], "pos": null, "metrics": {} },
+      "issues": [], "pos": null, "metrics": {}, "members": [] },
     { "id": "streaming", "name": "Streaming", "type": "component", "kind": "subsystem", "lifecycle": "current",
       "intent_short": "Loads textures asynchronously through the IO queue.", "symbols": 11, "children": 0, "file": null,
-      "issues": [], "pos": null, "metrics": {} }
+      "issues": [], "pos": null, "metrics": {}, "members": [] }
   ],
   "edges": [
     { "src": "apps", "dst": "io", "refs": 11, "calls": 7, "uses": 4, "declared": false, "issues": [], "metrics": {} },

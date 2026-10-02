@@ -1,5 +1,6 @@
 // The side panel: what the selection is. Symbol card with callers and callees and "open in editor",
 // the refs behind an edge, a component card, or a summary of the level.
+import { useReactFlow } from "@xyflow/react";
 import { useEffect, useState } from "react";
 
 import {
@@ -9,6 +10,7 @@ import {
   type RefList,
   type SymbolCard,
   type View,
+  type ViewMember,
   type ViewNode,
 } from "../api/client";
 import { cycleGroups } from "../graph/edges";
@@ -34,6 +36,7 @@ function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T | null; 
 }
 
 const CALLABLE = new Set(["function", "method", "constructor"]);
+const FIELD_KINDS = new Set(["field", "variable"]);
 
 function shortId(id: string): string {
   return id.startsWith("cxx ") ? id.slice(4) : id;
@@ -48,14 +51,16 @@ function SymbolLink({ id, label }: { id: string; label?: string }) {
   );
 }
 
-function Calls({ title, list, side }: { title: string; list: CallList | null; side: "caller" | "callee" }) {
-  if (!list) return null;
+function Calls({ title, result, side }: {
+  title: string; result: { data: CallList | null; error: string | null }; side: "caller" | "callee";
+}) {
+  const list = result.data;
   return (
     <section>
       <h3>
-        {title} <span className="count">{list.items.length}{list.more ? "+" : ""}</span>
+        {title} {list && <span className="count">{list.items.length}{list.more ? "+" : ""}</span>}
       </h3>
-      {list.items.length === 0 ? (
+      {result.error ? <p className="error" role="alert">{result.error}</p> : !list ? <p className="muted">Loading…</p> : list.items.length === 0 ? (
         <p className="muted">none in the call graph</p>
       ) : (
         <ul className="plain">
@@ -71,11 +76,28 @@ function Calls({ title, list, side }: { title: string; list: CallList | null; si
   );
 }
 
-export function SymbolPanel({ id }: { id: string }) {
+function MemberSection({ title, members }: { title: string; members: ViewMember[] }) {
+  if (!members.length) return null;
+  return (
+    <section>
+      <h3>{title} <span className="count">{members.length}</span></h3>
+      <ul className="plain">
+        {members.map((member) => (
+          <li key={member.id}>
+            <SymbolLink id={member.id} label={member.signature ?? member.name} />
+            {member.access && <span className="muted"> · {member.access}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function SymbolPanel({ id, members = [] }: { id: string; members?: ViewMember[] }) {
   const card = useLoad<SymbolCard>(() => api.symbol(id), [id]);
   const callers = useLoad<CallList>(() => api.callers(id), [id]);
   const callees = useLoad<CallList>(() => api.callees(id), [id]);
-  if (card.error) return <p className="error">{card.error}</p>;
+  if (card.error) return <p className="error" role="alert">{card.error}</p>;
   const s = card.data;
   if (!s) return <p className="muted">Loading…</p>;
   const place = s.defs[0] ?? s.decls[0];
@@ -98,8 +120,10 @@ export function SymbolPanel({ id }: { id: string }) {
         </a>
       )}
       {s.doc && <pre className="doc">{s.doc}</pre>}
-      {CALLABLE.has(s.kind) && <Calls title="Callers" list={callers.data} side="caller" />}
-      {CALLABLE.has(s.kind) && <Calls title="Callees" list={callees.data} side="callee" />}
+      <MemberSection title="Fields" members={members.filter((member) => FIELD_KINDS.has(member.kind))} />
+      <MemberSection title="Methods" members={members.filter((member) => !FIELD_KINDS.has(member.kind))} />
+      {CALLABLE.has(s.kind) && <Calls title="Callers" result={callers} side="caller" />}
+      {CALLABLE.has(s.kind) && <Calls title="Callees" result={callees} side="callee" />}
       <p className="muted small" title={s.id}>{s.id}</p>
     </div>
   );
@@ -127,7 +151,8 @@ export function EdgePanel({ view, src, dst }: { view: View; src: string; dst: st
           ))}
         </p>
       )}
-      {samples.error && <p className="error">{samples.error}</p>}
+      {samples.error && <p className="error" role="alert">{samples.error}</p>}
+      {!samples.error && !samples.data && <p className="muted">Loading examples…</p>}
       {samples.data && (
         <section>
           <h3>
@@ -155,7 +180,7 @@ export function EdgePanel({ view, src, dst }: { view: View; src: string; dst: st
 export function ComponentPanel({ id }: { id: string }) {
   const navigate = useMap((s) => s.navigate);
   const card = useLoad<ComponentCard>(() => api.component(id), [id]);
-  if (card.error) return <p className="error">{card.error}</p>;
+  if (card.error) return <p className="error" role="alert">{card.error}</p>;
   const c = card.data;
   if (!c) return <p className="muted">Loading…</p>;
   const model = c.model as { name?: string; kind?: string; lifecycle?: string; intent?: string };
@@ -210,20 +235,35 @@ export function ComponentPanel({ id }: { id: string }) {
 
 function LevelPanel({ view }: { view: View }) {
   const select = useMap((s) => s.select);
+  const status = useMap((s) => s.status);
+  const metric = useMap((s) => s.metric);
+  const threshold = useMap((s) => s.threshold);
   const undeclared = view.edges.filter((e) => e.issues.includes("undeclared_dependency"));
   const cycles = cycleGroups(view.edges);
   const issues = view.nodes.filter((n) => n.issues.length > 0);
   const names = new Map([...view.nodes, ...view.boundary].map((n) => [n.id, cardTitle(n)]));
   return (
     <div className="panel-body">
-      <h2>{view.trail[view.trail.length - 1]?.name ?? view.scope}</h2>
+      <h2>{view.scope === "root" ? status?.project_name ?? "root" : view.trail.at(-1)?.name ?? view.scope}</h2>
       <p className="muted">
         {view.nodes.length} nodes · {view.edges.length} edges
         {view.grouped_by ? ` · grouped by ${view.grouped_by}` : ""}
       </p>
       <p className="muted small">
-        Double click opens a component. Dragging pins a node. Click a node or an edge for details.
+        Select a node or connection for details. Double click a component to open it. Drag a node to save its position.
       </p>
+      <p className="muted small">
+        Pan by dragging the background; use zoom controls or the minimap on wide screens to move around. Connection width and labels show {metric}; connections below {threshold} are hidden. Selecting a node shows only its connections.
+      </p>
+      <section aria-label="Connection legend">
+        <h3>Connections</h3>
+        <ul className="legend">
+          <li><span className="legend-line legend-declared" aria-hidden="true" />Declared dependency</li>
+          <li><span className="legend-line legend-undeclared" aria-hidden="true" />Undeclared dependency</li>
+          <li><span className="legend-line legend-cycle" aria-hidden="true" />Cycle</li>
+          <li><span className="legend-line legend-plain" aria-hidden="true" />Other reference</li>
+        </ul>
+      </section>
       {(undeclared.length > 0 || cycles.length > 0 || issues.length > 0) && (
         <section>
           <h3>Issues on this level</h3>
@@ -264,9 +304,80 @@ function LevelPanel({ view }: { view: View }) {
   );
 }
 
+/** A keyboard and screen reader route to every item, including items outside the current viewport. */
+function MapIndex({ view }: { view: View }) {
+  const select = useMap((s) => s.select);
+  const navigate = useMap((s) => s.navigate);
+  const [expanded, setExpanded] = useState(() =>
+    typeof window.matchMedia === "function" && window.matchMedia("(max-width: 900px)").matches);
+  function show(selection: { kind: "node"; id: string; reveal?: boolean } | { kind: "edge"; src: string; dst: string }) {
+    select(selection);
+    window.setTimeout(() => document.getElementById("selection-details")?.focus(), 0);
+  }
+  const names = new Map([...view.nodes, ...view.boundary].map((node) => [node.id, cardTitle(node)]));
+  return (
+    <details className="map-index" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+      <summary>Browse map: {view.nodes.length + view.boundary.length} nodes, {view.edges.length} {view.edges.length === 1 ? "connection" : "connections"}</summary>
+      <div className="map-index-content">
+        <h3>Nodes</h3>
+        <ul className="plain">
+          {[...view.nodes, ...view.boundary].map((node) => {
+            const scope = drillScope(node.id, node.type);
+            return (
+              <li key={node.id}>
+                <button type="button" className="link" onClick={() => show({ kind: "node", id: node.id, reveal: true })}>
+                  {cardTitle(node)}
+                </button>
+                <span className="muted"> · {node.type}{node.issues.length ? ` · ${node.issues.join(", ").replaceAll("_", " ")}` : ""}</span>
+                {scope && <button type="button" className="link map-index-open" onClick={() => navigate(scope)} aria-label={`Open ${cardTitle(node)}`}>Open</button>}
+              </li>
+            );
+          })}
+        </ul>
+        <h3>Connections</h3>
+        {view.edges.length === 0 ? <p className="muted">No connections on this level.</p> : (
+          <ul className="plain">
+            {view.edges.map((edge) => (
+              <li key={`${edge.src}>${edge.dst}`}>
+                <button type="button" className="link" onClick={() => show({ kind: "edge", src: edge.src, dst: edge.dst })}>
+                  {names.get(edge.src) ?? edge.src} → {names.get(edge.dst) ?? edge.dst}
+                </button>
+                <span className="muted"> · {edge.refs} refs, {edge.calls} calls, {edge.uses} uses
+                  {edge.issues.length ? ` · ${edge.issues.join(", ").replaceAll("_", " ")}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function PositionControls({ id }: { id: string }) {
+  const flow = useReactFlow();
+  const pin = useMap((s) => s.pin);
+  function move(dx: number, dy: number) {
+    const position = flow.getNode(id)?.position;
+    if (position) void pin(id, { x: position.x + dx, y: position.y + dy });
+  }
+  return (
+    <details className="position-controls">
+      <summary>Adjust node position</summary>
+      <p className="muted small">Move by 40 pixels; the position is saved.</p>
+      <div className="move-buttons">
+        <button type="button" className="button" onClick={() => move(0, -40)}>Move up</button>
+        <button type="button" className="button" onClick={() => move(0, 40)}>Move down</button>
+        <button type="button" className="button" onClick={() => move(-40, 0)}>Move left</button>
+        <button type="button" className="button" onClick={() => move(40, 0)}>Move right</button>
+      </div>
+    </details>
+  );
+}
+
 function NodePanel({ node, symbol }: { node: ViewNode; symbol?: string }) {
   const navigate = useMap((s) => s.navigate);
-  if (node.type === "symbol") return <SymbolPanel id={symbol ?? node.id} />;
+  if (node.type === "symbol") return <SymbolPanel id={symbol ?? node.id} members={symbol && symbol !== node.id ? [] : node.members ?? []} />;
   if (node.type === "component") return <ComponentPanel id={node.id} />;
   const scope = drillScope(node.id, node.type);
   return (
@@ -287,7 +398,8 @@ function NodePanel({ node, symbol }: { node: ViewNode; symbol?: string }) {
 export function SidePanel() {
   const view = useMap((s) => s.view);
   const selection = useMap((s) => s.selection);
-  if (!view) return <aside className="panel" />;
+  const select = useMap((s) => s.select);
+  if (!view) return <aside id="map-details" className="panel" aria-label="Map details" tabIndex={-1} />;
   let body = <LevelPanel view={view} />;
   if (selection?.kind === "edge") {
     body = <EdgePanel view={view} src={selection.src} dst={selection.dst} />;
@@ -295,5 +407,18 @@ export function SidePanel() {
     const node = [...view.nodes, ...view.boundary].find((n) => n.id === selection.id);
     if (node) body = <NodePanel node={node} symbol={selection.symbol} />;
   }
-  return <aside className="panel">{body}</aside>;
+  return (
+    <aside id="map-details" className="panel" aria-label="Map details" tabIndex={-1}>
+      <div className="panel-tools">
+        {selection && <button type="button" className="link" onClick={() => select(null)}>Level overview</button>}
+        <MapIndex key={view.scope} view={view} />
+      </div>
+      <div className="sr-only" role="status" aria-live="polite">
+        {selection?.kind === "node" ? `Selected node ${[...view.nodes, ...view.boundary].find((n) => n.id === selection.id)?.name ?? selection.id}` :
+          selection?.kind === "edge" ? `Selected connection ${selection.src} to ${selection.dst}` : "Level overview"}
+      </div>
+      <div id="selection-details" tabIndex={-1}>{body}</div>
+      {selection?.kind === "node" && <PositionControls id={selection.id} />}
+    </aside>
+  );
 }

@@ -7,6 +7,7 @@ import {
   MiniMap,
   ReactFlow,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -15,7 +16,7 @@ import { autoLayout, type Positions, withPinned } from "../layout/layout";
 import { drillScope } from "../nav";
 import { useMap } from "../store";
 import { edgeTone, edgeWidth, maxMetric, visibleEdges } from "./edges";
-import { CARD_WIDTH, type CardNode, cardHeight, NodeCard } from "./NodeCard";
+import { type CardNode, cardHeight, cardTitle, cardWidth, NodeCard } from "./NodeCard";
 
 const nodeTypes = { card: NodeCard };
 const TONE_COLOR = {
@@ -33,6 +34,7 @@ function pinnedOf(view: View): Positions {
 
 export function Graph() {
   const view = useMap((s) => s.view);
+  const error = useMap((s) => s.error);
   const [auto, setAuto] = useState<{ scope: string; positions: Positions } | null>(null);
   const [layoutError, setLayoutError] = useState<string | null>(null);
 
@@ -40,7 +42,8 @@ export function Graph() {
   useEffect(() => {
     if (!view) return;
     let current = true;
-    const boxes = [...view.nodes, ...view.boundary].map((n) => ({ id: n.id, width: CARD_WIDTH, height: cardHeight(n) }));
+    setLayoutError(null);
+    const boxes = [...view.nodes, ...view.boundary].map((n) => ({ id: n.id, width: cardWidth(n), height: cardHeight(n) }));
     const links = view.edges.map((e) => ({ source: e.src, target: e.dst }));
     autoLayout(view.scope, view.level, boxes, links).then(
       (positions) => {
@@ -55,10 +58,12 @@ export function Graph() {
     };
   }, [view]);
 
-  if (!view) return <div className="graph graph-empty" />;
+  if (!view) return <div className="graph graph-empty" role="region" aria-label="Architecture map"><p>{error ? "Map unavailable. See the error above." : "Loading map…"}</p></div>;
   return (
-    <div className="graph">
-      {layoutError && <div className="banner banner-error">Layout failed: {layoutError}</div>}
+    <div className="graph" role="region" aria-label="Architecture map">
+      {layoutError && <div className="banner banner-error" role="alert">Layout failed: {layoutError}</div>}
+      {(!auto || auto.scope !== view.scope) && !layoutError && <p className="graph-message" role="status">Arranging map…</p>}
+      {view.nodes.length === 0 && view.boundary.length === 0 && <p className="graph-message">No nodes on this level.</p>}
       {auto && auto.scope === view.scope && <Level key={view.scope} view={view} positions={auto.positions} />}
     </div>
   );
@@ -66,6 +71,7 @@ export function Graph() {
 
 /** One level; mounted anew for every scope, so fitView frames the level once its nodes are in place. */
 function Level({ view, positions }: { view: View; positions: Positions }) {
+  const flow = useReactFlow();
   const metric = useMap((s) => s.metric);
   const threshold = useMap((s) => s.threshold);
   const selection = useMap((s) => s.selection);
@@ -81,8 +87,9 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
       type: "card",
       position: placed[node.id] ?? { x: 0, y: 0 },
       data: { node, boundary },
+      ariaLabel: `${node.name}, ${node.type}, ${node.symbols} symbols${node.issues.length ? `, issues: ${node.issues.join(", ").replaceAll("_", " ")}` : ""}`,
       selected: node.id === focus,
-      width: CARD_WIDTH,
+      width: cardWidth(node),
       height: cardHeight(node),
     });
     return [...view.nodes.map((n) => card(n, false)), ...view.boundary.map((n) => card(n, true))];
@@ -90,11 +97,19 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<CardNode>(cards);
   useEffect(() => setNodes(cards), [cards, setNodes]);
+  useEffect(() => {
+    if (selection?.kind !== "node" || !selection.reveal) return;
+    const frame = window.requestAnimationFrame(() => {
+      void flow.fitView({ nodes: [{ id: selection.id }], padding: 0.3, maxZoom: 1.1, duration: 250 });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [flow, selection, view.scope]);
 
   const edges = useMemo<Edge<{ edge: ViewEdge }>[]>(() => {
     const shown = visibleEdges(view.edges, metric, threshold, focus);
     const max = maxMetric(view.edges, metric);
     const boundary = new Set(view.boundary.map((n) => n.id));
+    const names = new Map([...view.nodes, ...view.boundary].map((n) => [n.id, cardTitle(n)]));
     return shown.map((e) => {
       const tone = edgeTone(e);
       return {
@@ -106,6 +121,7 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
         style: { strokeWidth: edgeWidth(e[metric], max) },
         markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, markerUnits: "userSpaceOnUse", color: TONE_COLOR[tone] },
         label: String(e[metric]),
+        ariaLabel: `${names.get(e.src) ?? e.src} to ${names.get(e.dst) ?? e.dst}, ${e[metric]} ${metric}${e.issues.length ? `, issues: ${e.issues.join(", ").replaceAll("_", " ")}` : ""}`,
         selected: selection?.kind === "edge" && selection.src === e.src && selection.dst === e.dst,
       };
     });
@@ -129,13 +145,13 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
       nodesConnectable={false}
       zoomOnDoubleClick={false}
       fitView
-      fitViewOptions={{ padding: 0.12 }}
-      minZoom={0.05}
+      fitViewOptions={{ padding: 0.12, minZoom: 0.8 }}
+      minZoom={0.4}
       maxZoom={2}
     >
       <Background gap={24} />
       <Controls showInteractive={false} />
-      <MiniMap pannable zoomable className="minimap" />
+      <MiniMap pannable zoomable className="minimap" ariaLabel="Map overview; drag or zoom to navigate" />
     </ReactFlow>
   );
 }

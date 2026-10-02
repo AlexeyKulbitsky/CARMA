@@ -1,13 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ViewNode } from "../api/client";
-import { cardMeta, NodeCard } from "./NodeCard";
+import { useMap } from "../store";
+import { cardHeight, cardMeta, cardWidth, NodeCard } from "./NodeCard";
 
 const node = (extra: Partial<ViewNode>): ViewNode => ({
   id: "render", name: "Render", type: "component", kind: "subsystem", lifecycle: "current", intent_short: "",
-  symbols: 24, children: 1, file: null, issues: [], pos: null, metrics: {}, ...extra,
+  symbols: 24, children: 1, file: null, issues: [], pos: null, metrics: {}, ...extra, members: extra.members ?? [],
 });
 
 function show(n: ViewNode, boundary = false, selected = false) {
@@ -42,5 +43,23 @@ describe("NodeCard", () => {
   it("describes symbol nodes by kind and file", () => {
     expect(cardMeta(node({ type: "symbol", kind: "class", file: "src/render/Renderer.h" }))).toBe("class · Renderer.h");
     expect(cardMeta(node({ type: "file", symbols: 1 }))).toBe("file · 1 symbol");
+  });
+
+  it("shows class fields and methods inside the block and opens the selected member", () => {
+    const showSymbol = vi.fn();
+    useMap.setState({ showSymbol });
+    const klass = node({ id: "cxx Renderer#", name: "Renderer", type: "symbol", kind: "class", members: [
+      { id: "cxx Renderer#m_items.", name: "m_items", kind: "field", signature: "Items m_items", access: "private" },
+      { id: "cxx Renderer#Draw().", name: "Draw", kind: "method", signature: "void Draw()", access: "public" },
+    ] });
+    show(klass);
+    expect(screen.getByText("Fields")).toBeTruthy();
+    expect(screen.getByText("Methods")).toBeTruthy();
+    expect(screen.getByText("Items m_items")).toBeTruthy();
+    expect(screen.getByText("void Draw()")).toBeTruthy();
+    expect(cardWidth(klass)).toBe(300);
+    expect(cardHeight(klass)).toBeGreaterThan(58);
+    fireEvent.click(screen.getByRole("button", { name: "public method void Draw()" }));
+    expect(showSymbol).toHaveBeenCalledWith("cxx Renderer#Draw().");
   });
 });

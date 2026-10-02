@@ -84,6 +84,12 @@ def test_leaf_level_shows_symbols_by_file(golden_core):
     nodes = {n.id: n for n in view.nodes}
     renderer = nodes["cxx golden/render/Renderer#"]
     assert renderer.file == "src/render/Renderer.h" and renderer.symbols == 8  # the class, its methods and fields
+    assert [(m.kind, m.name) for m in renderer.members] == [
+        ("field", "m_items"), ("field", "m_stats"), ("field", "m_streamer"),
+        ("method", "Add"), ("method", "DrawScene"), ("constructor", "Renderer"), ("method", "Width"),
+    ]
+    assert next(m for m in renderer.members if m.name == "DrawScene").signature == "void DrawScene()"
+    assert next(m for m in renderer.members if m.name == "m_streamer").access == "private"
     assert DRAW_SCENE not in nodes  # methods rise to their class
     assert {n.id for n in view.boundary} == {"apps", "core", "render.backend", "streaming"}
     edges = {(e.src, e.dst): e for e in view.edges}

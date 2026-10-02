@@ -2,7 +2,8 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
 
-import type { ViewNode } from "../api/client";
+import type { ViewMember, ViewNode } from "../api/client";
+import { useMap } from "../store";
 
 export interface CardData extends Record<string, unknown> {
   node: ViewNode;
@@ -13,9 +14,19 @@ export type CardNode = Node<CardData, "card">;
 
 export const CARD_WIDTH = 220;
 
+const FIELD_KINDS = new Set(["field", "variable"]);
+
+export function cardWidth(node: ViewNode): number {
+  return node.type === "symbol" && (node.members?.length ?? 0) > 0 ? 300 : CARD_WIDTH;
+}
+
 export function cardHeight(node: ViewNode): number {
-  if (node.type === "symbol" || node.type === "file" || node.type === "folder") return 58;
-  return node.intent_short ? 96 : 72;
+  const base = node.type === "symbol" || node.type === "file" || node.type === "folder" ? 58 : node.intent_short ? 96 : 72;
+  const fields = (node.members ?? []).filter((member) => FIELD_KINDS.has(member.kind)).length;
+  const methods = (node.members?.length ?? 0) - fields;
+  const groupHeight = (count: number) => count ? 22 + 20 * Math.min(count, 3) : 0;
+  return base + groupHeight(fields) + groupHeight(methods)
+    + (node.issues.length ? 24 * Math.ceil(node.issues.length / 2) : 0);
 }
 
 export function cardTitle(node: ViewNode): string {
@@ -42,8 +53,33 @@ export function cardMeta(node: ViewNode): string {
   }
 }
 
+function MemberList({ title, nodeName, members }: { title: string; nodeName: string; members: ViewMember[] }) {
+  const showSymbol = useMap((s) => s.showSymbol);
+  if (!members.length) return null;
+  return (
+    <section className="card-member-section" aria-label={`${title} of ${nodeName}`}>
+      <div className="card-member-heading">{title} <span className="count">{members.length}</span></div>
+      <ul className="card-member-list nowheel nodrag">
+        {members.map((member) => (
+          <li key={member.id}>
+            <button type="button" className="link card-member-link nodrag"
+              title={`${member.access ? `${member.access} ` : ""}${member.signature ?? member.name}`}
+              aria-label={`${member.access ? `${member.access} ` : ""}${member.kind} ${member.signature ?? member.name}`}
+              onClick={(event) => { event.stopPropagation(); void showSymbol(member.id); }}>
+              <span className="card-member-signature">{member.signature ?? member.name}</span>
+              {member.access && <span className="card-member-access">{member.access}</span>}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export const NodeCard = memo(function NodeCard({ data, selected }: NodeProps<CardNode>) {
   const { node, boundary } = data;
+  const fields = (node.members ?? []).filter((member) => FIELD_KINDS.has(member.kind));
+  const methods = (node.members ?? []).filter((member) => !FIELD_KINDS.has(member.kind));
   const classes = ["card", `card-${node.type}`];
   if (boundary) classes.push("card-boundary");
   if (selected) classes.push("card-focused");
@@ -60,6 +96,8 @@ export const NodeCard = memo(function NodeCard({ data, selected }: NodeProps<Car
       </div>
       <div className="card-meta">{cardMeta(node)}</div>
       {node.intent_short && <div className="card-intent">{node.intent_short}</div>}
+      <MemberList title="Fields" nodeName={node.name} members={fields} />
+      <MemberList title="Methods" nodeName={node.name} members={methods} />
       {node.issues.length > 0 && (
         <div className="card-issues">
           {node.issues.map((code) => (

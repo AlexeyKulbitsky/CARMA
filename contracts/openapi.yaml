@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: CARMA View API
   description: The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). Symbol IDs contain spaces, '/' and '#', so they always travel as the query parameter id.
-  version: '0.1'
+  version: '0.2'
 paths:
   /api/v0/status:
     get:
@@ -1343,6 +1343,37 @@ components:
         - issues
         - metrics
       title: ViewEdge
+    ViewMember:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          title: Kind
+          description: field, variable, method, constructor, destructor or function
+        signature:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Signature
+        access:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Access
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - signature
+        - access
+      title: ViewMember
     ViewNode:
       properties:
         id:
@@ -1419,6 +1450,12 @@ components:
           type: object
           title: Metrics
           description: runtime metrics; empty in v0
+        members:
+          items:
+            $ref: '#/components/schemas/ViewMember'
+          type: array
+          title: Members
+          description: direct fields and methods of a class, struct or union; empty otherwise
       additionalProperties: false
       type: object
       required:
@@ -1434,4 +1471,5 @@ components:
         - issues
         - pos
         - metrics
+        - members
       title: ViewNode

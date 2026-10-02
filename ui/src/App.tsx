@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 
-import { PREFIX } from "./api/client";
+import { API_VERSION, PREFIX } from "./api/client";
 import { Graph } from "./graph/Graph";
 import { Breadcrumbs, Search, Toolbar } from "./Header";
 import { scopeFromHash } from "./nav";
@@ -13,6 +13,8 @@ export function App() {
   const refresh = useMap((s) => s.refresh);
   const error = useMap((s) => s.error);
   const loading = useMap((s) => s.loading);
+  const view = useMap((s) => s.view);
+  const status = useMap((s) => s.status);
 
   useEffect(() => {
     const onHash = () => void open(scopeFromHash(window.location.hash));
@@ -33,6 +35,9 @@ export function App() {
   return (
     <ReactFlowProvider>
       <div className="app">
+        <button type="button" className="skip-link" onClick={() => document.getElementById("map-details")?.focus()}>
+          Skip to map details
+        </button>
         <header className="top">
           <Breadcrumbs />
           <Search />
@@ -43,6 +48,14 @@ export function App() {
             {error}
           </div>
         )}
+        {status && status.contracts.api !== API_VERSION && (
+          <div className="banner banner-warning" role="status">
+            The CARMA server uses an older API. Restart carma serve to show class fields and methods.
+          </div>
+        )}
+        <div className="sr-only" role="status" aria-live="polite">
+          {loading ? "Loading map" : view ? `Map level: ${view.trail.at(-1)?.name ?? view.scope}` : ""}
+        </div>
         <main className={loading ? "main loading" : "main"}>
           <Graph />
           <SidePanel />

@@ -16,10 +16,22 @@ from carma.store.api import FactStore, Ref
 ALL_REFS = 1 << 62  # refs_from / refs_to limit: a view needs every ref of its symbols
 DECLARATION_ROLES = frozenset({"definition", "forward_decl"})
 INTENT_SHORT = 120
+CLASS_KINDS = frozenset({"class", "struct", "union"})
+FIELD_KINDS = frozenset({"field", "variable"})
+METHOD_KINDS = frozenset({"method", "constructor", "destructor", "function"})
 
 
 class UnknownScope(KeyError):
     pass
+
+
+@dataclass(frozen=True)
+class Member:
+    id: str
+    name: str
+    kind: str
+    signature: str | None
+    access: str | None
 
 
 @dataclass(frozen=True)
@@ -36,6 +48,7 @@ class Node:
     issues: tuple[str, ...] = ()
     pos: tuple[float, float] | None = None
     metrics: Mapping[str, float] = field(default_factory=dict)  # filled by the runtime layer (stage 3)
+    members: tuple[Member, ...] = ()  # direct fields and methods of a class, struct or union
 
 
 @dataclass(frozen=True)
@@ -242,9 +255,19 @@ def _symbol_level(state: State, store: FactStore, scope: str, component: str) ->
 
     nodes = []
     if level.grouped_by is None:
+        members_by_parent: dict[str, list[Member]] = {}
+        for sid, top in level.top_of.items():
+            info = symbols[sid]
+            if (info.parent == top and symbols[top].kind in CLASS_KINDS
+                    and info.kind in FIELD_KINDS | METHOD_KINDS):
+                members_by_parent.setdefault(top, []).append(Member(sid, info.name, info.kind,
+                                                                       info.signature, info.access))
         for top, count in level.counts.items():
             info = symbols[top]
-            nodes.append(Node(id=top, name=info.name, type="symbol", kind=info.kind, symbols=count, file=info.place))
+            members = sorted(members_by_parent.get(top, ()),
+                             key=lambda m: (m.kind not in FIELD_KINDS, m.name.casefold(), m.signature or "", m.id))
+            nodes.append(Node(id=top, name=info.name, type="symbol", kind=info.kind, symbols=count,
+                              file=info.place, members=tuple(members)))
     else:
         groups: Counter = Counter()
         for top, count in level.counts.items():

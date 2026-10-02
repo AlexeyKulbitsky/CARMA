@@ -24,7 +24,7 @@ def test_serve_answers_over_http(golden_project, free_port):
             except httpx2.TransportError:
                 time.sleep(0.2)
         assert status is not None, process.stdout.read() if process.poll() is not None else "no answer in 30 s"
-        assert status["components"] == 6 and status["contracts"]["api"] == "api/0.1"
+        assert status["components"] == 6 and status["contracts"]["api"] == "api/0.2"
         view = httpx2.get(f"{base}/api/v0/view", params={"scope": "render"}).json()
         assert [n["id"] for n in view["nodes"]] == ["render.backend", "render._self"]
         assert httpx2.get(base).status_code == 200  # the map, or the page that says how to build it

@@ -60,7 +60,9 @@ def _ref(ref: Ref) -> s.RefSample:
 def _node(n: views.Node) -> s.ViewNode:
     return s.ViewNode(id=n.id, name=n.name, type=n.type, kind=n.kind, lifecycle=n.lifecycle, intent_short=n.intent_short,
                       symbols=n.symbols, children=n.children, file=n.file, issues=list(n.issues),
-                      pos=s.Position(x=n.pos[0], y=n.pos[1]) if n.pos else None, metrics=dict(n.metrics))
+                      pos=s.Position(x=n.pos[0], y=n.pos[1]) if n.pos else None, metrics=dict(n.metrics),
+                      members=[s.ViewMember(id=m.id, name=m.name, kind=m.kind, signature=m.signature, access=m.access)
+                               for m in n.members])
 
 
 def _tree(n) -> s.TreeNode:

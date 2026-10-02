@@ -97,3 +97,16 @@ def test_root_view_matches_the_expected_answer(client, golden_dir, golden_core):
         for node in view["nodes"] + view["boundary"]:
             node.pop("pos")
     assert actual == expected
+
+
+def test_symbol_view_includes_class_fields_and_methods(client):
+    nodes = check(client.get(f"{PREFIX}/view", params={"scope": "render._self"}), "/view")["nodes"]
+    renderer = next(node for node in nodes if node["name"] == "Renderer")
+    assert len(renderer["members"]) == 7
+    assert renderer["members"][0] == {
+        "id": "cxx golden/render/Renderer#m_items.", "name": "m_items", "kind": "field",
+        "signature": "std::vector<IRenderable *> m_items", "access": "private",
+    }
+    assert any(member["id"] == DRAW_SCENE and member["kind"] == "method" for member in renderer["members"])
+    root = check(client.get(f"{PREFIX}/view", params={"scope": "root"}), "/view")
+    assert all(node["members"] == [] for node in root["nodes"])
