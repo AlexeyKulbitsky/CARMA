@@ -1,0 +1,42 @@
+name: desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: '21.1.8'
+      - name: Dependencies
+        run: uv sync --locked --extra desktop --group build
+      - name: Build UI
+        working-directory: ui
+        run: npm ci && npm run build
+      - name: Build application
+        run: uv run --extra desktop --group build python scripts/build_desktop.py
+      - name: Check packaged indexer
+        if: runner.os == 'Windows'
+        run: uv run --extra desktop --group build python scripts/check_desktop.py
+      - name: Archive application preserving native permissions and symlinks
+        run: tar -czf CARMA-${{ runner.os }}.tar.gz -C dist .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CARMA-${{ runner.os }}
+          path: CARMA-${{ runner.os }}.tar.gz

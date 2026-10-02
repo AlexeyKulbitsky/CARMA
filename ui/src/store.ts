@@ -1,7 +1,7 @@
 // Map state: the open level, what is selected, how edges are measured. Everything comes from the View API.
 import { create } from "zustand";
 
-import { api, ApiError, type ComponentTree, type Position, type Status, type View } from "./api/client";
+import { api, ApiError, clientProject, type Camera, type ComponentTree, type Position, type Status, type View, type Workspace } from "./api/client";
 import { initialThreshold, metricThresholds, type Metric } from "./graph/edges";
 import { hashForScope, ROOT, scopeFromHash } from "./nav";
 
@@ -11,6 +11,8 @@ export type Selection =
   | null;
 
 interface MapState {
+  workspace: Workspace;
+  project: string | null;
   status: Status | null;
   tree: ComponentTree | null;
   scope: string;
@@ -34,9 +36,38 @@ interface MapState {
   setThreshold(threshold: number): void;
   pin(nodeId: string, position: Position): Promise<void>;
   resetLayout(): Promise<void>;
+  initialize(): Promise<void>;
+  saveCamera(camera: Camera): void;
+  flushWorkspace(): Promise<void>;
 }
 
 let request = 0;
+let initialization = 0;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let saves: Promise<void> = Promise.resolve();
+const emptyWorkspace = (): Workspace => ({ schema_version: "workspace/0.1", scope: ROOT, views: {} });
+
+function saveViewingState(): void {
+  const state = useMap.getState();
+  const workspace: Workspace = { ...state.workspace, scope: state.scope, views: { ...state.workspace.views,
+    [state.scope]: { ...state.workspace.views[state.scope], metric: state.metric, threshold: state.threshold } } };
+  useMap.setState({ workspace });
+  const expected = state.project;
+  const source = state.status?.project_root;
+  if (saveTimer) clearTimeout(saveTimer);
+  const save = () => {
+    saveTimer = undefined;
+    saves = saves.catch(() => undefined).then(() => api.saveWorkspace(workspace, expected)).then(() => undefined).catch((error) => {
+      if (useMap.getState().status?.project_root === source) useMap.setState({ error: `Could not save your view: ${message(error)}` });
+      throw error;
+    });
+    // A later save may recover; callers of flushWorkspace still receive the failure.
+    void saves.catch(() => undefined);
+  };
+  pendingSave = save;
+  saveTimer = setTimeout(save, 250);
+}
+let pendingSave: (() => void) | undefined;
 
 function message(error: unknown): string {
   if (error instanceof ApiError) return `${error.message} (${error.code})`;
@@ -44,6 +75,8 @@ function message(error: unknown): string {
 }
 
 export const useMap = create<MapState>()((set, get) => ({
+  workspace: emptyWorkspace(),
+  project: null,
   status: null,
   tree: null,
   scope: ROOT,
@@ -55,6 +88,24 @@ export const useMap = create<MapState>()((set, get) => ({
   selection: null,
   pendingSelection: null,
 
+  async initialize() {
+    const generation = ++initialization;
+    ++request;
+    set({ view: null, status: null, tree: null, selection: null, pendingSelection: null, loading: true,
+      workspace: emptyWorkspace(), project: clientProject(), metric: "refs", threshold: 1, error: null });
+    let restoreError: string | null = null;
+    const workspace = await api.workspace().catch((error) => {
+      restoreError = `Could not restore your view: ${message(error)}`;
+      return emptyWorkspace();
+    });
+    if (generation !== initialization) return;
+    const scope = window.location.hash && window.location.hash !== "#/" ? scopeFromHash(window.location.hash) : workspace.scope;
+    set({ workspace, scope });
+    window.history.replaceState(null, "", hashForScope(scope));
+    await get().refresh();
+    if (restoreError) set({ error: restoreError });
+  },
+
   async open(scope) {
     const id = ++request;
     const previousScope = get().view?.scope;
@@ -63,10 +114,13 @@ export const useMap = create<MapState>()((set, get) => ({
     try {
       const view = await api.view(scope);
       if (id !== request) return;
-      const choices = metricThresholds(view.edges, get().metric);
+      const saved = get().workspace.views[scope];
+      const metric = saved?.metric ?? get().metric;
+      const choices = metricThresholds(view.edges, metric);
       const preserved = choices.find((value) => value >= get().threshold) ?? choices.at(-1)!;
       set({ view, loading: false, selection: get().pendingSelection, pendingSelection: null,
-        threshold: previousScope === scope ? preserved : initialThreshold(view.edges, get().metric) });
+        metric, threshold: saved?.threshold ?? (previousScope === scope ? preserved : initialThreshold(view.edges, metric)) });
+      saveViewingState();
     } catch (error) {
       if (id !== request) return;
       set({ loading: false, error: message(error), pendingSelection: null });
@@ -106,11 +160,13 @@ export const useMap = create<MapState>()((set, get) => ({
   },
 
   async refresh() {
+    const generation = initialization;
     let metadataError: string | null = null;
     const [status, tree] = await Promise.all([api.status(), api.components()]).catch((error) => {
       metadataError = message(error);
       return [null, null] as const;
     });
+    if (generation !== initialization) return;
     if (status && tree) set({ status, tree });
     const { scope, selection } = get();
     set({ pendingSelection: selection });
@@ -124,10 +180,26 @@ export const useMap = create<MapState>()((set, get) => ({
 
   setMetric(metric) {
     set({ metric, threshold: initialThreshold(get().view?.edges ?? [], metric) });
+    saveViewingState();
   },
 
   setThreshold(threshold) {
     set({ threshold });
+    saveViewingState();
+  },
+
+  saveCamera(camera) {
+    const { workspace, scope, metric, threshold } = get();
+    set({ workspace: { ...workspace, views: { ...workspace.views, [scope]: { camera, metric, threshold } } } });
+    saveViewingState();
+  },
+
+  async flushWorkspace() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      pendingSave?.();
+    }
+    await saves;
   },
 
   async pin(nodeId, position) {

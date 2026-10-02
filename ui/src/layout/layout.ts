@@ -3,6 +3,7 @@
 // talks to it. Pinned positions from layout.json always win over the automatic ones.
 import ELK, { type ELK as ElkEngine, type ElkNode } from "elkjs/lib/elk-api.js";
 import elkWorkerUrl from "elkjs/lib/elk-worker.min.js?url";
+import { api } from "../api/client";
 
 export interface Box {
   id: string;
@@ -19,7 +20,6 @@ export type Positions = Record<string, { x: number; y: number }>;
 
 export type Level = "components" | "symbols";
 
-const STORAGE_PREFIX = "carma.layout.";
 // Component levels are few nodes where the direction of dependencies matters: layered, top down.
 // Symbol levels put dozens of classes into one layer and turn into a thin strip, so they use stress
 // and then remove overlaps.
@@ -34,10 +34,10 @@ const STRESS = { "elk.algorithm": "stress", "elk.stress.desiredEdgeLength": "260
 const NO_OVERLAP = { "elk.algorithm": "sporeOverlap", "elk.spacing.nodeNode": "24" };
 
 /** FNV-1a over the level kind, the scope, the node boxes and the edges, order-independent. */
-export function layoutKey(scope: string, level: Level, boxes: Box[], links: Link[]): string {
+export function layoutKey(scope: string, level: Level, boxes: Box[], links: Link[], project = ""): string {
   const nodes = boxes.map((b) => `${b.id}:${b.width}x${b.height}`).sort();
   const edges = links.map((l) => `${l.source}>${l.target}`).sort();
-  const text = `${level}|${scope}|${nodes.join(",")}|${edges.join(",")}`;
+  const text = `${project}|${level}|${scope}|${nodes.join(",")}|${edges.join(",")}`;
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     hash ^= text.charCodeAt(i);
@@ -66,26 +66,11 @@ export function withPinned(auto: Positions, pinned: Positions): Positions {
 const memory = new Map<string, Positions>();
 let engine: ElkEngine | null = null;
 
-function stored(key: string): Positions | null {
-  try {
-    const text = localStorage.getItem(STORAGE_PREFIX + key);
-    return text ? (JSON.parse(text) as Positions) : null;
-  } catch {
-    return null;
-  }
-}
-
-function store(key: string, positions: Positions): void {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(positions));
-  } catch {
-    // private mode or a full quota: the memory cache still works
-  }
-}
-
-export async function autoLayout(scope: string, level: Level, boxes: Box[], links: Link[]): Promise<Positions> {
-  const key = layoutKey(scope, level, boxes, links);
-  const known = memory.get(key) ?? stored(key);
+export async function autoLayout(scope: string, level: Level, boxes: Box[], links: Link[],
+                                 projectKey = "", project: string | null = null): Promise<Positions> {
+  const key = layoutKey(scope, level, boxes, links, projectKey);
+  const persisted = memory.has(key) ? null : await api.cachedLayout(key, project);
+  const known = memory.get(key) ?? (persisted && Object.keys(persisted.positions).length ? persisted.positions : null);
   if (known) {
     memory.set(key, known);
     return known;
@@ -99,6 +84,6 @@ export async function autoLayout(scope: string, level: Level, boxes: Box[], link
   const positions: Positions = {};
   for (const child of result.children ?? []) positions[child.id] = { x: child.x ?? 0, y: child.y ?? 0 };
   memory.set(key, positions);
-  store(key, positions);
+  await api.cacheLayout({ key, positions }, project);
   return positions;
 }

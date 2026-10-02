@@ -50,6 +50,35 @@ body {
 code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
 
 .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+.application { height: 100dvh; display: flex; flex-direction: column; }
+.application-map { flex: 1; min-height: 0; }
+.application-map .app { height: 100%; }
+.project-home { min-height: 100dvh; padding: 64px 24px; background: radial-gradient(ellipse at top, var(--card-self), var(--bg) 65%); }
+.project-home-inner { max-width: 860px; margin: 0 auto; }
+.project-heading { display: flex; align-items: center; gap: 18px; margin-bottom: 36px; }
+.project-heading h1 { font-size: 36px; letter-spacing: .05em; margin: 0; }
+.project-heading p { margin: 4px 0; color: var(--muted); }
+.project-logo { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: var(--accent); color: white; font-size: 38px; font-weight: 700; }
+.button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.open-project { font-size: 16px; padding: 12px 24px; }
+.project-home h2 { font-size: 18px; margin: 0 0 16px; }
+.project-setup { padding: 24px; margin: 28px 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.project-setup .button { margin-right: 12px; }
+.build-choice { display: grid; gap: 8px; margin: 20px 0; }
+.build-choice select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); padding: 10px; border-radius: 6px; }
+.project-path { margin: 4px 0; color: var(--muted); overflow-wrap: anywhere; font-size: 13px; }
+.recent-projects { margin-top: 40px; }
+.recent-projects ul { list-style: none; margin: 0; padding: 0; }
+.recent-projects li { display: flex; justify-content: space-between; gap: 20px; padding: 20px 0; border-top: 1px solid var(--line); }
+.recent-projects strong { font-size: 16px; }
+.recent-actions { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.project-progress { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 16px 24px; background: var(--card-self); border-bottom: 1px solid var(--line); }
+.project-home .project-progress { margin: 24px 0; border-radius: 8px; }
+.project-progress p { margin: 4px 0; font-size: 13px; overflow-wrap: anywhere; }
+.progress-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.project-home .banner { margin-bottom: 24px; }
+.banner pre { max-height: 220px; overflow: auto; white-space: pre-wrap; }
+@media (max-width: 700px) { .project-home { padding-top: 32px; } .project-progress { flex-direction: column; align-items: stretch; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .skip-link { position: absolute; top: -100px; left: 12px; z-index: 100; padding: 8px 12px; background: var(--panel); color: var(--accent); border: 2px solid var(--accent); border-radius: 6px; }
 .skip-link:focus { top: 8px; }

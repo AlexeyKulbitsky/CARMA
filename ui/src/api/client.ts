@@ -17,9 +17,22 @@ export type SymbolCard = Schemas["SymbolCard"];
 export type CallList = Schemas["CallList"];
 export type RefList = Schemas["RefList"];
 export type Position = Schemas["Position"];
+export type Workspace = Schemas["Workspace"];
+export type Camera = Schemas["Camera"];
+export type ApplicationState = Schemas["ApplicationState"];
+export type ProjectInspection = Schemas["ProjectInspection"];
+export type CachedLayout = Schemas["CachedLayout"];
 
 export const PREFIX = "/api/v0";
-export const API_VERSION = "api/0.2";
+export const API_VERSION = "api/0.3";
+
+let token: string | null = null;
+let project: string | null = null;
+export function configureClient(state: ApplicationState): void {
+  token = state.token ?? null;
+  project = state.active?.id ?? null;
+}
+export function clientProject(): string | null { return project; }
 
 export class ApiError extends Error {
   readonly status: number;
@@ -45,10 +58,15 @@ export function apiUrl(path: string, params: Params = {}): string {
   return PREFIX + path + (text ? `?${text}` : "");
 }
 
-async function request<T>(method: string, path: string, params?: Params, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, params?: Params, body?: unknown,
+                          expectedProject: string | null = project): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers["X-Carma-Token"] = token;
+  if (expectedProject) headers["X-Carma-Project"] = expectedProject;
   const response = await fetch(apiUrl(path, params), {
     method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
@@ -79,4 +97,23 @@ export const api = {
     request<RefList>("GET", "/edges/samples", { scope, src, dst, limit: 50 }),
   saveLayout: (scope: string, positions: Record<string, Position>) =>
     request<unknown>("PUT", `/layout/${encodeURIComponent(scope)}`, undefined, { positions }),
+  workspace: () => request<Workspace>("GET", "/workspace"),
+  saveWorkspace: (workspace: Workspace, expected: string | null) =>
+    request<Workspace>("PUT", "/workspace", undefined, workspace, expected),
+  cachedLayout: (key: string, expected: string | null) =>
+    request<CachedLayout>("GET", `/layout-cache/${key}`, undefined, undefined, expected),
+  cacheLayout: (layout: CachedLayout, expected: string | null) =>
+    request<CachedLayout>("PUT", `/layout-cache/${layout.key}`, undefined, layout, expected),
+};
+
+export const application = {
+  state: () => request<ApplicationState>("GET", "/app/state"),
+  chooseFolder: () => request<Schemas["FolderChoice"]>("POST", "/app/pick-folder"),
+  inspect: (path: string) => request<ProjectInspection>("POST", "/app/inspect", undefined, { path }),
+  open: (path: string, build_id?: string, replace_id?: string) =>
+    request<ApplicationState>("POST", "/app/open", undefined, { path, build_id, replace_id }),
+  update: () => request<ApplicationState>("POST", "/app/reindex"),
+  cancel: () => request<ApplicationState>("POST", "/app/cancel"),
+  close: () => request<ApplicationState>("POST", "/app/close"),
+  forget: (id: string) => request<ApplicationState>("POST", "/app/forget", undefined, { id }),
 };

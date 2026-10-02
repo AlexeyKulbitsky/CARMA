@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: CARMA View API
   description: The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). Symbol IDs contain spaces, '/' and '#', so they always travel as the query parameter id.
-  version: '0.2'
+  version: '0.3'
 paths:
   /api/v0/status:
     get:
@@ -460,8 +460,460 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/workspace:
+    get:
+      summary: Renderer-independent viewing state
+      operationId: workspace_api_v0_workspace_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Save the last level, camera and filters
+      operationId: write_workspace_api_v0_workspace_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Workspace'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/layout-cache/{key}:
+    get:
+      summary: Derived node positions for this project and graph
+      operationId: layout_cache_api_v0_layout_cache__key__get
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CachedLayout'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Write Layout Cache
+      operationId: write_layout_cache_api_v0_layout_cache__key__put
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CachedLayout'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CachedLayout'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/state:
+    get:
+      summary: State
+      operationId: state_api_v0_app_state_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/pick-folder:
+    post:
+      summary: Pick Folder
+      operationId: pick_folder_api_v0_app_pick_folder_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderChoice'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/inspect:
+    post:
+      summary: Inspect
+      operationId: inspect_api_v0_app_inspect_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectPath'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectInspection'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/open:
+    post:
+      summary: Open Project
+      operationId: open_project_api_v0_app_open_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenProject'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/reindex:
+    post:
+      summary: Reindex
+      operationId: reindex_api_v0_app_reindex_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/cancel:
+    post:
+      summary: Cancel
+      operationId: cancel_api_v0_app_cancel_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/close:
+    post:
+      summary: Close
+      operationId: close_api_v0_app_close_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/app/forget:
+    post:
+      summary: Forget
+      operationId: forget_api_v0_app_forget_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecentProject'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
+    ApplicationState:
+      properties:
+        managed:
+          type: boolean
+          title: Managed
+        token:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Token
+        active:
+          anyOf:
+            - $ref: '#/components/schemas/Project'
+            - type: 'null'
+        projects:
+          items:
+            $ref: '#/components/schemas/Project'
+          type: array
+          title: Projects
+          default: []
+        job:
+          anyOf:
+            - $ref: '#/components/schemas/ProjectJob'
+            - type: 'null'
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+        - managed
+      title: ApplicationState
+    BuildChoice:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          enum:
+            - saved
+            - commands
+            - build
+            - preset
+            - cmake
+          title: Kind
+        path:
+          type: string
+          title: Path
+        configuration:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Configuration
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - kind
+        - path
+      title: BuildChoice
+    CachedLayout:
+      properties:
+        key:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Key
+        positions:
+          additionalProperties:
+            $ref: '#/components/schemas/Position'
+          type: object
+          title: Positions
+      additionalProperties: false
+      type: object
+      required:
+        - key
+        - positions
+      title: CachedLayout
     CallEdge:
       properties:
         caller:
@@ -513,6 +965,26 @@ components:
         - items
         - more
       title: CallList
+    Camera:
+      properties:
+        x:
+          type: number
+          title: X
+        y:
+          type: number
+          title: Y
+        zoom:
+          type: number
+          maximum: 20.0
+          exclusiveMinimum: 0.0
+          title: Zoom
+      additionalProperties: false
+      type: object
+      required:
+        - x
+        - y
+        - zoom
+      title: Camera
     ComponentCard:
       properties:
         id:
@@ -742,6 +1214,18 @@ components:
         - platform
         - loaded_at
       title: FactsStatus
+    FolderChoice:
+      properties:
+        path:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Path
+      additionalProperties: false
+      type: object
+      required:
+        - path
+      title: FolderChoice
     InterfaceSymbol:
       properties:
         id:
@@ -897,6 +1381,28 @@ components:
         - column
         - end_line
       title: Location
+    OpenProject:
+      properties:
+        path:
+          type: string
+          minLength: 1
+          title: Path
+        build_id:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Build Id
+        replace_id:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Replace Id
+          description: Relocated recent project to replace after successful opening
+      additionalProperties: false
+      type: object
+      required:
+        - path
+      title: OpenProject
     PathList:
       properties:
         paths:
@@ -939,6 +1445,117 @@ components:
         - x
         - y
       title: Position
+    Project:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        path:
+          type: string
+          title: Path
+        available:
+          type: boolean
+          title: Available
+        ready:
+          type: boolean
+          title: Ready
+        opened_at:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Opened At
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - path
+        - available
+        - ready
+      title: Project
+    ProjectInspection:
+      properties:
+        project:
+          $ref: '#/components/schemas/Project'
+        choices:
+          items:
+            $ref: '#/components/schemas/BuildChoice'
+          type: array
+          title: Choices
+      additionalProperties: false
+      type: object
+      required:
+        - project
+        - choices
+      title: ProjectInspection
+    ProjectJob:
+      properties:
+        id:
+          type: string
+          title: Id
+        path:
+          type: string
+          title: Path
+        status:
+          type: string
+          enum:
+            - running
+            - ready
+            - failed
+            - cancelled
+          title: Status
+        stage:
+          type: string
+          title: Stage
+        message:
+          type: string
+          title: Message
+        done:
+          type: integer
+          title: Done
+        total:
+          type: integer
+          title: Total
+        error:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Error
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - path
+        - status
+        - stage
+        - message
+        - done
+        - total
+      title: ProjectJob
+    ProjectPath:
+      properties:
+        path:
+          type: string
+          minLength: 1
+          title: Path
+      additionalProperties: false
+      type: object
+      required:
+        - path
+      title: ProjectPath
+    RecentProject:
+      properties:
+        id:
+          type: string
+          title: Id
+      additionalProperties: false
+      type: object
+      required:
+        - id
+      title: RecentProject
     RefList:
       properties:
         items:
@@ -1473,3 +2090,46 @@ components:
         - metrics
         - members
       title: ViewNode
+    Workspace:
+      properties:
+        schema_version:
+          type: string
+          const: workspace/0.1
+          title: Schema Version
+          default: workspace/0.1
+        scope:
+          type: string
+          minLength: 1
+          title: Scope
+          default: root
+        views:
+          additionalProperties:
+            $ref: '#/components/schemas/WorkspaceView'
+          type: object
+          title: Views
+          default: {}
+      additionalProperties: false
+      type: object
+      title: Workspace
+    WorkspaceView:
+      properties:
+        camera:
+          anyOf:
+            - $ref: '#/components/schemas/Camera'
+            - type: 'null'
+        metric:
+          type: string
+          enum:
+            - refs
+            - calls
+            - uses
+          title: Metric
+          default: refs
+        threshold:
+          type: number
+          minimum: 0.0
+          title: Threshold
+          default: 1
+      additionalProperties: false
+      type: object
+      title: WorkspaceView

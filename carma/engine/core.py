@@ -52,10 +52,10 @@ class Status:
 
 
 class Core:
-    def __init__(self, config: Config, store: FactStore):
+    def __init__(self, config: Config, store: FactStore, *, repo: ModelRepo | None = None):
         self.config = config
         self.store = store
-        self.repo = ModelRepo(config.carma_dir / "model")
+        self.repo = repo or ModelRepo(config.carma_dir / "model")
         self._lock = threading.RLock()
         self._listeners: list[Listener] = []
         self._symbols: dict[str, SymbolInfo] = {}

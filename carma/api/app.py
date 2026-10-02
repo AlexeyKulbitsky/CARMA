@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
+from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Annotated
 
@@ -20,13 +22,20 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from carma import __version__
 from carma.api import schemas as s
+from carma.api.application import build_application_router
+from carma.application.preparation import ApplicationError
+from carma.application.manager import ProjectManager
 from carma.engine import views
 from carma.config import SCHEMA_VERSION as CONFIG_VERSION
+from carma.config import ConfigError
+from carma.compiledb.model import CompileDbError
 from carma.engine.core import Core, UnknownSymbol
 from carma.engine.symbols import place_loc
 from carma.engine.tree import ROOT, UNASSIGNED
 from carma.model import yaml_io
 from carma.model.layout import LAYOUT_VERSION
+from carma.model.workspace import load_workspace, save_workspace
+from carma.model.json_io import read_json, write_json
 from carma.model.repo import SCHEMA_VERSION, ModelValidationError, UnknownComponentError
 from carma.store.api import CONTRACT_VERSION as STORE_VERSION
 from carma.store.api import Loc, Ref
@@ -38,7 +47,24 @@ ERRORS = {404: {"model": s.ErrorResponse, "description": "unknown ID or scope"},
 UI_DIR = Path(__file__).resolve().parent.parent / "_ui"
 
 
-def _core(request: Request) -> Core:
+def _core(request: Request):
+    manager = request.app.state.manager
+    if manager is not None:
+        with manager.lease(request.headers.get("X-Carma-Project")) as core:
+            yield core
+        return
+    core = request.app.state.core
+    if core is None:
+        raise StarletteHTTPException(503, "no project is loaded")
+    yield core
+
+
+def _stream_core(request: Request) -> Core:
+    """Event streams do not lease the session for their entire lifetime."""
+    manager = request.app.state.manager
+    if manager is not None:
+        with manager.lease(request.headers.get("X-Carma-Project")) as core:
+            return core
     core = request.app.state.core
     if core is None:
         raise StarletteHTTPException(503, "no project is loaded")
@@ -181,7 +207,7 @@ def build_router() -> APIRouter:
 
     @r.get("/events", response_class=StreamingResponse, summary="Server-sent events: " + ", ".join(EVENTS),
            responses={200: {"content": {"text/event-stream": {}}, "description": "an event stream"}})
-    async def events(request: Request, core: CoreDep) -> StreamingResponse:
+    async def events(request: Request, core: Annotated[Core, Depends(_stream_core)]) -> StreamingResponse:
         queue: asyncio.Queue[str] = asyncio.Queue()
         loop = asyncio.get_running_loop()
         unsubscribe = core.subscribe(lambda event: loop.call_soon_threadsafe(queue.put_nowait, event))
@@ -202,17 +228,58 @@ def build_router() -> APIRouter:
 
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
+    @r.get("/workspace", response_model=s.Workspace, summary="Renderer-independent viewing state")
+    def workspace(core: CoreDep):
+        return load_workspace(core.config.carma_dir)
+
+    @r.put("/workspace", response_model=s.Workspace, summary="Save the last level, camera and filters")
+    def write_workspace(core: CoreDep, body: s.Workspace):
+        return save_workspace(core.config.carma_dir, body.model_dump())
+
+    @r.get("/layout-cache/{key}", response_model=s.CachedLayout, summary="Derived node positions for this project and graph")
+    def layout_cache(core: CoreDep, key: str):
+        if not key.isalnum() or len(key) > 100:
+            raise StarletteHTTPException(422, "invalid layout cache key")
+        return read_json(core.config.cache_dir / "layouts" / f"{key}.json", {"key": key, "positions": {}})
+
+    @r.put("/layout-cache/{key}", response_model=s.CachedLayout)
+    def write_layout_cache(core: CoreDep, key: str, body: s.CachedLayout):
+        if not key.isalnum() or len(key) > 100 or key != body.key:
+            raise StarletteHTTPException(422, "invalid layout cache key")
+        write_json(core.config.cache_dir / "layouts" / f"{key}.json", body.model_dump())
+        return body
+
     return r
 
 
-def create_app(core: Core | None = None, *, ui_dir: Path | None = UI_DIR, keepalive: float = 15.0) -> FastAPI:
+def create_app(core: Core | None = None, *, ui_dir: Path | None = UI_DIR, keepalive: float = 15.0,
+               manager: ProjectManager | None = None, choose_folder=None) -> FastAPI:
     app = FastAPI(title="CARMA View API", version=s.API_VERSION.split("/")[1], openapi_url=f"{PREFIX}/openapi.json",
                   docs_url=None, redoc_url=None,
                   description="The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). "
                               "Symbol IDs contain spaces, '/' and '#', so they always travel as the query parameter id.")
     app.state.core = core
+    app.state.manager = manager
+    app.state.choose_folder = choose_folder
     app.state.keepalive = keepalive
     app.include_router(build_router())
+    app.include_router(build_application_router(PREFIX))
+
+    @app.middleware("http")
+    async def local_access(request: Request, call_next):
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            origin = request.headers.get("origin")
+            if origin and urlsplit(origin).netloc != request.headers.get("host"):
+                return _error(403, "forbidden", "Request came from another application.")
+            if manager and not secrets.compare_digest(request.headers.get("X-Carma-Token", ""), manager.token):
+                return _error(403, "forbidden", "Application token required.")
+        return await call_next(request)
+
+    app.add_exception_handler(ApplicationError, lambda request, exc: _error(
+        409 if exc.code in {"busy", "project_changed", "no_project"} else 400, exc.code, str(exc)))
+    for failure in (ConfigError, CompileDbError):
+        app.add_exception_handler(failure, lambda request, exc: _error(400, "project_error", str(exc)))
+    app.add_exception_handler(OSError, lambda request, exc: _error(400, "file_error", "Could not access project files: " + str(exc)))
 
     for missing in (views.UnknownScope, UnknownComponentError, UnknownSymbol):
         app.add_exception_handler(missing, lambda request, exc: _error(404, "not_found", f"unknown: {exc.args[0]}"))

@@ -66,7 +66,8 @@ def run_cmake(build_dir: Path) -> None:
         raise CompileDbError(
             f"{build_dir} is not a configured CMake build folder; configure it first, e.g. cmake -S . -B {build_dir.name}"
         )
-    result = subprocess.run([cmake, str(build_dir)], capture_output=True, text=True, check=False)
+    result = subprocess.run([cmake, str(build_dir)], capture_output=True, text=True, check=False,
+                            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0)
     if result.returncode != 0:
         raise CompileDbError(f"cmake failed in {build_dir}:\n{result.stdout}\n{result.stderr}")
 

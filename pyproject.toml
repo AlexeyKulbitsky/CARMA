@@ -18,11 +18,21 @@ dependencies = [
 [project.scripts]
 carma = "carma.cli:main"
 
+[project.gui-scripts]
+carma-app = "carma.desktop:main"
+
+[project.optional-dependencies]
+desktop = [
+    "pywebview>=6.0",
+    "pywebview[pyside6]>=6.0; sys_platform == 'linux'",
+]
+
 [dependency-groups]
 dev = [
     "httpx2>=2.13",
     "pytest>=8",
 ]
+build = ["pyinstaller>=6.16"]
 
 [build-system]
 requires = ["hatchling"]

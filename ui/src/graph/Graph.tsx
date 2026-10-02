@@ -35,6 +35,8 @@ function pinnedOf(view: View): Positions {
 export function Graph() {
   const view = useMap((s) => s.view);
   const error = useMap((s) => s.error);
+  const projectKey = useMap((s) => s.status?.project_root ?? "");
+  const project = useMap((s) => s.project);
   const [auto, setAuto] = useState<{ scope: string; positions: Positions } | null>(null);
   const [layoutError, setLayoutError] = useState<string | null>(null);
 
@@ -45,7 +47,7 @@ export function Graph() {
     setLayoutError(null);
     const boxes = [...view.nodes, ...view.boundary].map((n) => ({ id: n.id, width: cardWidth(n), height: cardHeight(n) }));
     const links = view.edges.map((e) => ({ source: e.src, target: e.dst }));
-    autoLayout(view.scope, view.level, boxes, links).then(
+    autoLayout(view.scope, view.level, boxes, links, projectKey, project).then(
       (positions) => {
         if (!current) return;
         setLayoutError(null);
@@ -56,7 +58,7 @@ export function Graph() {
     return () => {
       current = false;
     };
-  }, [view]);
+  }, [view, projectKey, project]);
 
   if (!view) return <div className="graph graph-empty" role="region" aria-label="Architecture map"><p>{error ? "Map unavailable. See the error above." : "Loading map…"}</p></div>;
   return (
@@ -78,6 +80,8 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
   const select = useMap((s) => s.select);
   const navigate = useMap((s) => s.navigate);
   const pin = useMap((s) => s.pin);
+  const saveCamera = useMap((s) => s.saveCamera);
+  const camera = useMap.getState().workspace.views[view.scope]?.camera;
   const focus = selection?.kind === "node" ? selection.id : null;
 
   const cards = useMemo<CardNode[]>(() => {
@@ -144,7 +148,9 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
       onlyRenderVisibleElements
       nodesConnectable={false}
       zoomOnDoubleClick={false}
-      fitView
+      defaultViewport={camera ?? undefined}
+      fitView={!camera}
+      onMoveEnd={(_, viewport) => saveCamera(viewport)}
       fitViewOptions={{ padding: 0.12, minZoom: 0.8 }}
       minZoom={0.4}
       maxZoom={2}

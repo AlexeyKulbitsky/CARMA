@@ -58,7 +58,8 @@ def _llvm_config() -> list[Path]:
     found = []
     for flag in ("--bindir", "--libdir"):
         try:
-            out = subprocess.run([tool, flag], capture_output=True, text=True, check=True, timeout=10).stdout.strip()
+            out = subprocess.run([tool, flag], capture_output=True, text=True, check=True, timeout=10,
+                                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0).stdout.strip()
         except (OSError, subprocess.SubprocessError):
             continue
         found += [Path(out) / name for name in _library_names()]
@@ -104,6 +105,9 @@ def candidates(configured: str | None = None) -> list[Path]:
         result.append(Path(env))
     if configured:
         result.append(Path(configured))
+    # The standalone distribution carries the same adapter's library and builtin headers.
+    bundled = Path(__file__).resolve().parents[2] / "_runtime" / "llvm"
+    result += _in_llvm_prefix(bundled)
     llvm_path = os.environ.get("LLVM_PATH")
     if llvm_path:
         result += _in_llvm_prefix(Path(llvm_path))
@@ -178,7 +182,8 @@ def resource_dir(info: LibclangInfo) -> Path | None:
     clang = prefix / "bin" / ("clang.exe" if sys.platform == "win32" else "clang")
     if clang.is_file():
         try:
-            out = subprocess.run([str(clang), "-print-resource-dir"], capture_output=True, text=True, check=True, timeout=30)
+            out = subprocess.run([str(clang), "-print-resource-dir"], capture_output=True, text=True, check=True, timeout=30,
+                                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0)
         except (OSError, subprocess.SubprocessError):
             return None
         folder = Path(out.stdout.strip())

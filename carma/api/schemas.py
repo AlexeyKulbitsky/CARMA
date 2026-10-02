@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-API_VERSION = "api/0.2"
+API_VERSION = "api/0.3"
 
 IssueCode = Literal["invalid_model", "broken_anchor", "ambiguous_membership", "empty", "stale", "missing_dependency",
                     "undeclared_dependency", "cycle"]
@@ -14,7 +14,7 @@ Lifecycle = Literal["current", "planned", "deprecated"]
 
 
 class Model(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
 
 
 class ErrorBody(Model):
@@ -269,4 +269,84 @@ class LayoutBody(Model):
 
 class LayoutResult(Model):
     scope: str
+    positions: dict[str, Position]
+
+
+class Camera(Position):
+    zoom: float = Field(gt=0, le=20)
+
+
+class WorkspaceView(Model):
+    camera: Camera | None = None
+    metric: Literal["refs", "calls", "uses"] = "refs"
+    threshold: float = Field(default=1, ge=0)
+
+
+class Workspace(Model):
+    schema_version: Literal["workspace/0.1"] = "workspace/0.1"
+    scope: str = Field(default="root", min_length=1)
+    views: dict[str, WorkspaceView] = {}
+
+
+class Project(Model):
+    id: str
+    name: str
+    path: str
+    available: bool
+    ready: bool
+    opened_at: str | None = None
+
+
+class BuildChoice(Model):
+    id: str
+    name: str
+    kind: Literal["saved", "commands", "build", "preset", "cmake"]
+    path: str
+    configuration: str | None = None
+
+
+class ProjectJob(Model):
+    id: str
+    path: str
+    status: Literal["running", "ready", "failed", "cancelled"]
+    stage: str
+    message: str
+    done: int
+    total: int
+    error: str | None = None
+
+
+class ApplicationState(Model):
+    managed: bool
+    token: str | None = None
+    active: Project | None = None
+    projects: list[Project] = []
+    job: ProjectJob | None = None
+    warnings: list[str] = []
+
+
+class ProjectPath(Model):
+    path: str = Field(min_length=1)
+
+
+class OpenProject(ProjectPath):
+    build_id: str | None = None
+    replace_id: str | None = Field(default=None, description="Relocated recent project to replace after successful opening")
+
+
+class ProjectInspection(Model):
+    project: Project
+    choices: list[BuildChoice]
+
+
+class FolderChoice(Model):
+    path: str | None
+
+
+class RecentProject(Model):
+    id: str
+
+
+class CachedLayout(Model):
+    key: str = Field(min_length=1, max_length=100)
     positions: dict[str, Position]

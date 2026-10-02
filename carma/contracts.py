@@ -14,7 +14,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-SCHEMAS = ("facts", "model", "config", "layout")
+SCHEMAS = ("facts", "model", "config", "layout", "workspace")
 
 
 def contracts_dir() -> Path:

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "carma:contracts/workspace/0.1",
+  "title": "CARMA viewing state (.carma/workspace.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scope", "views"],
+  "properties": {
+    "schema_version": { "const": "workspace/0.1" },
+    "scope": { "type": "string", "minLength": 1 },
+    "views": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["metric", "threshold"],
+        "properties": {
+          "metric": { "enum": ["refs", "calls", "uses"] },
+          "threshold": { "type": "number", "minimum": 0 },
+          "camera": {
+            "type": ["object", "null"], "additionalProperties": false,
+            "required": ["x", "y", "zoom"],
+            "properties": {
+              "x": { "type": "number" }, "y": { "type": "number" },
+              "zoom": { "type": "number", "exclusiveMinimum": 0, "maximum": 20 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
