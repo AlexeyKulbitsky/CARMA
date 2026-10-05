@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import tempfile
+import time
 from pathlib import Path
 
 
@@ -16,12 +18,23 @@ def newline_of(path: Path) -> str:
 
 def write_atomic(path: Path, text: str, newline: str = "\n") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    tmp = None
     try:
-        with tmp.open("w", encoding="utf-8", newline=newline) as f:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline=newline, delete=False,
+                                         dir=path.parent, prefix=f".{path.name}.", suffix=".tmp") as f:
+            tmp = Path(f.name)
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        for attempt in range(20):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError as exc:
+                # A concurrent Windows reader briefly holds the old file without delete sharing.
+                if os.name != "nt" or getattr(exc, "winerror", None) not in (5, 32, 33) or attempt == 19:
+                    raise
+                time.sleep(.01)
     finally:
-        tmp.unlink(missing_ok=True)
+        if tmp:
+            tmp.unlink(missing_ok=True)

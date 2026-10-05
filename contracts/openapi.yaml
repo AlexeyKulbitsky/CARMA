@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: CARMA View API
   description: The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). Symbol IDs contain spaces, '/' and '#', so they always travel as the query parameter id.
-  version: '0.3'
+  version: '0.5'
 paths:
   /api/v0/status:
     get:
@@ -171,6 +171,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/execution/entrypoints:
+    get:
+      summary: Suggested program entry points
+      operationId: execution_entries_api_v0_execution_entrypoints_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolList'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/execution/view:
+    post:
+      summary: Static function flow with contextual call targets; never executes project code
+      operationId: execution_api_v0_execution_view_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionFunction'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v0/symbols:
     get:
       summary: A symbol, its definition, component and editor link
@@ -189,6 +241,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SymbolCard'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/execution/entity:
+    get:
+      summary: Object type, fields, methods and base types
+      operationId: execution_entity_api_v0_execution_entity_get
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionEntity'
         '404':
           description: unknown ID or scope
           content:
@@ -499,6 +581,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Workspace'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v0/exploration:
+    get:
+      summary: Saved execution exploration and selected mode
+      operationId: exploration_api_v0_exploration_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exploration'
+        '404':
+          description: unknown ID or scope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Save expanded calls, positions and camera
+      operationId: write_exploration_api_v0_exploration_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Exploration'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exploration'
         '404':
           description: unknown ID or scope
           content:
@@ -1144,6 +1277,26 @@ components:
         - uses
         - declared
       title: DependencyEdge
+    DetachedStudy:
+      properties:
+        function:
+          type: string
+          minLength: 1
+          title: Function
+          description: Expanded call-site key, or root
+        group:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Group
+        position:
+          $ref: '#/components/schemas/Position'
+      additionalProperties: false
+      type: object
+      required:
+        - function
+        - position
+      title: DetachedStudy
     ErrorBody:
       properties:
         code:
@@ -1173,6 +1326,457 @@ components:
       required:
         - error
       title: ErrorResponse
+    ExecutionCall:
+      properties:
+        symbol:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Symbol
+        name:
+          type: string
+          title: Name
+        receiver:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Receiver
+        arguments:
+          items:
+            anyOf:
+              - type: string
+              - type: 'null'
+          type: array
+          title: Arguments
+          default: []
+        virtual:
+          type: boolean
+          title: Virtual
+          default: false
+        candidates:
+          items:
+            type: string
+          type: array
+          title: Candidates
+          default: []
+        expandable:
+          items:
+            type: string
+          type: array
+          title: Expandable
+          default: []
+        resolution:
+          type: string
+          enum:
+            - direct
+            - inferred
+            - virtual
+            - unknown
+          title: Resolution
+          default: direct
+        explanation:
+          type: string
+          title: Explanation
+          default: ''
+        bindings:
+          additionalProperties:
+            type: string
+          type: object
+          title: Bindings
+          default: {}
+        assignments:
+          items:
+            $ref: '#/components/schemas/ExecutionEffect'
+          type: array
+          title: Assignments
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+        - symbol
+        - name
+      title: ExecutionCall
+    ExecutionEdge:
+      properties:
+        source:
+          type: string
+          title: Source
+        target:
+          type: string
+          title: Target
+        label:
+          type: string
+          title: Label
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+        - source
+        - target
+      title: ExecutionEdge
+    ExecutionEffect:
+      properties:
+        target:
+          type: string
+          title: Target
+        value:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Value
+        type_symbol:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Type Symbol
+        ownership:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Ownership
+      additionalProperties: false
+      type: object
+      required:
+        - target
+      title: ExecutionEffect
+    ExecutionEntity:
+      properties:
+        symbol:
+          $ref: '#/components/schemas/SymbolCard'
+        members:
+          items:
+            $ref: '#/components/schemas/SymbolBrief'
+          type: array
+          title: Members
+        bases:
+          items:
+            $ref: '#/components/schemas/SymbolBrief'
+          type: array
+          title: Bases
+      additionalProperties: false
+      type: object
+      required:
+        - symbol
+        - members
+        - bases
+      title: ExecutionEntity
+    ExecutionFunction:
+      properties:
+        schema_version:
+          type: string
+          const: execution/0.2
+          title: Schema Version
+          default: execution/0.2
+        symbol:
+          type: string
+          title: Symbol
+        name:
+          type: string
+          title: Name
+        path:
+          type: string
+          title: Path
+        line:
+          type: integer
+          minimum: 1.0
+          title: Line
+        entry:
+          type: string
+          title: Entry
+        exit:
+          type: string
+          title: Exit
+        parameters:
+          items:
+            type: string
+          type: array
+          title: Parameters
+          default: []
+        nodes:
+          items:
+            $ref: '#/components/schemas/ExecutionNode'
+          type: array
+          title: Nodes
+        edges:
+          items:
+            $ref: '#/components/schemas/ExecutionEdge'
+          type: array
+          title: Edges
+        objects:
+          items:
+            $ref: '#/components/schemas/ExecutionObject'
+          type: array
+          title: Objects
+          default: []
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+          default: []
+        groups:
+          items:
+            $ref: '#/components/schemas/ExecutionGroup'
+          type: array
+          title: Groups
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+        - symbol
+        - name
+        - path
+        - line
+        - entry
+        - exit
+        - nodes
+        - edges
+      title: ExecutionFunction
+    ExecutionGroup:
+      properties:
+        id:
+          type: string
+          title: Id
+        label:
+          type: string
+          title: Label
+        members:
+          items:
+            type: string
+          type: array
+          title: Members
+        origin:
+          type: string
+          enum:
+            - comment
+            - structure
+          title: Origin
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - label
+        - members
+        - origin
+      title: ExecutionGroup
+    ExecutionNode:
+      properties:
+        id:
+          type: string
+          title: Id
+        anchor:
+          type: string
+          title: Anchor
+          description: Content anchor stable across line shifts; repeated statements have distinct occurrences
+          default: ''
+        kind:
+          type: string
+          enum:
+            - entry
+            - exit
+            - action
+            - branch
+            - loop
+            - return
+            - break
+            - continue
+            - opaque
+          title: Kind
+        label:
+          type: string
+          title: Label
+        code:
+          type: string
+          title: Code
+        path:
+          type: string
+          title: Path
+        line:
+          type: integer
+          minimum: 1.0
+          title: Line
+        end_line:
+          type: integer
+          minimum: 1.0
+          title: End Line
+        calls:
+          items:
+            $ref: '#/components/schemas/ExecutionCall'
+          type: array
+          title: Calls
+          default: []
+        effects:
+          items:
+            $ref: '#/components/schemas/ExecutionEffect'
+          type: array
+          title: Effects
+          default: []
+        objects:
+          items:
+            type: string
+          type: array
+          title: Objects
+          default: []
+        note:
+          type: string
+          title: Note
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - kind
+        - label
+        - code
+        - path
+        - line
+        - end_line
+      title: ExecutionNode
+    ExecutionObject:
+      properties:
+        id:
+          type: string
+          title: Id
+        name:
+          type: string
+          title: Name
+        type_name:
+          type: string
+          title: Type Name
+        type_symbol:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Type Symbol
+        ownership:
+          type: string
+          enum:
+            - value
+            - borrowed
+            - unique
+            - shared
+            - raw
+          title: Ownership
+        created:
+          type: boolean
+          title: Created
+        line:
+          type: integer
+          minimum: 1.0
+          title: Line
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - name
+        - type_name
+        - type_symbol
+        - ownership
+        - created
+        - line
+      title: ExecutionObject
+    ExecutionRequest:
+      properties:
+        symbol:
+          type: string
+          minLength: 1
+          title: Symbol
+        path:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Path
+        bindings:
+          additionalProperties:
+            type: string
+          type: object
+          maxProperties: 128
+          title: Bindings
+      additionalProperties: false
+      type: object
+      required:
+        - symbol
+      title: ExecutionRequest
+    Exploration:
+      properties:
+        schema_version:
+          type: string
+          const: exploration/0.2
+          title: Schema Version
+          default: exploration/0.2
+        mode:
+          type: string
+          enum:
+            - execution
+            - architecture
+          title: Mode
+          default: execution
+        entry:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Entry
+        entry_path:
+          anyOf:
+            - type: string
+            - type: 'null'
+          title: Entry Path
+        views:
+          additionalProperties:
+            $ref: '#/components/schemas/ExplorationView'
+          type: object
+          maxProperties: 100
+          title: Views
+        studies:
+          additionalProperties:
+            $ref: '#/components/schemas/FunctionStudy'
+          type: object
+          maxProperties: 1000
+          title: Studies
+          description: Function identity -> personal groups and annotations, independent of call sites
+      additionalProperties: false
+      type: object
+      title: Exploration
+    ExplorationView:
+      properties:
+        expanded:
+          additionalProperties:
+            type: string
+          type: object
+          maxProperties: 100
+          title: Expanded
+        origins:
+          additionalProperties:
+            type: string
+          type: object
+          maxProperties: 100
+          title: Origins
+          description: Call site -> scope identity where its details were opened
+        positions:
+          additionalProperties:
+            $ref: '#/components/schemas/Position'
+          type: object
+          maxProperties: 10000
+          title: Positions
+        camera:
+          anyOf:
+            - $ref: '#/components/schemas/Camera'
+            - type: 'null'
+        blocks:
+          items:
+            type: string
+          type: array
+          maxItems: 1000
+          title: Blocks
+        detached:
+          additionalProperties:
+            $ref: '#/components/schemas/DetachedStudy'
+          type: object
+          maxProperties: 100
+          title: Detached
+      additionalProperties: false
+      type: object
+      title: ExplorationView
     FactsStatus:
       properties:
         files:
@@ -1226,6 +1830,29 @@ components:
       required:
         - path
       title: FolderChoice
+    FunctionStudy:
+      properties:
+        groups:
+          items:
+            $ref: '#/components/schemas/StudyGroup'
+          type: array
+          maxItems: 500
+          title: Groups
+        dismissed:
+          items:
+            type: string
+          type: array
+          maxItems: 1000
+          title: Dismissed
+        annotations:
+          additionalProperties:
+            $ref: '#/components/schemas/StudyAnnotation'
+          type: object
+          maxProperties: 10000
+          title: Annotations
+      additionalProperties: false
+      type: object
+      title: FunctionStudy
     InterfaceSymbol:
       properties:
         id:
@@ -1649,6 +2276,62 @@ components:
         - issues
         - highlight
       title: Status
+    StudyAnnotation:
+      properties:
+        title:
+          type: string
+          maxLength: 300
+          title: Title
+          default: ''
+        note:
+          type: string
+          maxLength: 20000
+          title: Note
+          default: ''
+        status:
+          type: string
+          enum:
+            - unread
+            - studying
+            - understood
+            - question
+          title: Status
+          default: unread
+        color:
+          type: string
+          pattern: ^(|#[0-9a-fA-F]{6})$
+          title: Color
+          default: ''
+      additionalProperties: false
+      type: object
+      title: StudyAnnotation
+    StudyGroup:
+      properties:
+        id:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Id
+        title:
+          type: string
+          maxLength: 300
+          minLength: 1
+          title: Title
+        members:
+          items:
+            type: string
+          type: array
+          maxItems: 10000
+          minItems: 2
+          title: Members
+          description: Stable instruction anchors in source order
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - title
+        - members
+      title: StudyGroup
     SymbolBrief:
       properties:
         id:

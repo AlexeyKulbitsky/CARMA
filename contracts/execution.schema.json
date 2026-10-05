@@ -1,0 +1,463 @@
+{
+  "$defs": {
+    "ExecutionCall": {
+      "additionalProperties": false,
+      "properties": {
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Symbol"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "receiver": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Receiver"
+        },
+        "arguments": {
+          "default": [],
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Arguments",
+          "type": "array"
+        },
+        "virtual": {
+          "default": false,
+          "title": "Virtual",
+          "type": "boolean"
+        },
+        "candidates": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "expandable": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Expandable",
+          "type": "array"
+        },
+        "resolution": {
+          "default": "direct",
+          "enum": [
+            "direct",
+            "inferred",
+            "virtual",
+            "unknown"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        },
+        "explanation": {
+          "default": "",
+          "title": "Explanation",
+          "type": "string"
+        },
+        "bindings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Bindings",
+          "type": "object"
+        },
+        "assignments": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ExecutionEffect"
+          },
+          "title": "Assignments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "symbol",
+        "name"
+      ],
+      "title": "ExecutionCall",
+      "type": "object"
+    },
+    "ExecutionEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "title": "ExecutionEdge",
+      "type": "object"
+    },
+    "ExecutionEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "type_symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Symbol"
+        },
+        "ownership": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ownership"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "title": "ExecutionEffect",
+      "type": "object"
+    },
+    "ExecutionGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "members": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Members",
+          "type": "array"
+        },
+        "origin": {
+          "enum": [
+            "comment",
+            "structure"
+          ],
+          "title": "Origin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "members",
+        "origin"
+      ],
+      "title": "ExecutionGroup",
+      "type": "object"
+    },
+    "ExecutionNode": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "anchor": {
+          "default": "",
+          "description": "Content anchor stable across line shifts; repeated statements have distinct occurrences",
+          "title": "Anchor",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "entry",
+            "exit",
+            "action",
+            "branch",
+            "loop",
+            "return",
+            "break",
+            "continue",
+            "opaque"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "calls": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ExecutionCall"
+          },
+          "title": "Calls",
+          "type": "array"
+        },
+        "effects": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ExecutionEffect"
+          },
+          "title": "Effects",
+          "type": "array"
+        },
+        "objects": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Objects",
+          "type": "array"
+        },
+        "note": {
+          "default": "",
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "label",
+        "code",
+        "path",
+        "line",
+        "end_line"
+      ],
+      "title": "ExecutionNode",
+      "type": "object"
+    },
+    "ExecutionObject": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type_name": {
+          "title": "Type Name",
+          "type": "string"
+        },
+        "type_symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Type Symbol"
+        },
+        "ownership": {
+          "enum": [
+            "value",
+            "borrowed",
+            "unique",
+            "shared",
+            "raw"
+          ],
+          "title": "Ownership",
+          "type": "string"
+        },
+        "created": {
+          "title": "Created",
+          "type": "boolean"
+        },
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type_name",
+        "type_symbol",
+        "ownership",
+        "created",
+        "line"
+      ],
+      "title": "ExecutionObject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "execution/0.2",
+      "default": "execution/0.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "symbol": {
+      "title": "Symbol",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "line": {
+      "minimum": 1,
+      "title": "Line",
+      "type": "integer"
+    },
+    "entry": {
+      "title": "Entry",
+      "type": "string"
+    },
+    "exit": {
+      "title": "Exit",
+      "type": "string"
+    },
+    "parameters": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Parameters",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/ExecutionNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/ExecutionEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "objects": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ExecutionObject"
+      },
+      "title": "Objects",
+      "type": "array"
+    },
+    "warnings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "groups": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ExecutionGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    }
+  },
+  "required": [
+    "symbol",
+    "name",
+    "path",
+    "line",
+    "entry",
+    "exit",
+    "nodes",
+    "edges"
+  ],
+  "title": "ExecutionFunction",
+  "type": "object"
+}

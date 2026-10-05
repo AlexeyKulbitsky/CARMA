@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
+import threading
+from weakref import WeakKeyDictionary
 from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Annotated
@@ -25,6 +27,9 @@ from carma.api import schemas as s
 from carma.api.application import build_application_router
 from carma.application.preparation import ApplicationError
 from carma.application.manager import ProjectManager
+from carma.application.execution import ExecutionService
+from carma.engine.execution import entrypoints, execution_view
+from carma.execution.api import ExecutionFunction, ExecutionUnavailable
 from carma.engine import views
 from carma.config import SCHEMA_VERSION as CONFIG_VERSION
 from carma.config import ConfigError
@@ -35,6 +40,7 @@ from carma.engine.tree import ROOT, UNASSIGNED
 from carma.model import yaml_io
 from carma.model.layout import LAYOUT_VERSION
 from carma.model.workspace import load_workspace, save_workspace
+from carma.model.exploration import load_exploration, save_exploration
 from carma.model.json_io import read_json, write_json
 from carma.model.repo import SCHEMA_VERSION, ModelValidationError, UnknownComponentError
 from carma.store.api import CONTRACT_VERSION as STORE_VERSION
@@ -162,6 +168,20 @@ def build_router() -> APIRouter:
                                        line=place.range[0] + 1 if place else None, external=sym.external))
         return s.SymbolList(items=items, more=more)
 
+    @r.get("/execution/entrypoints", response_model=s.SymbolList, summary="Suggested program entry points")
+    def execution_entries(core: CoreDep):
+        return {"items": entrypoints(core), "more": False}
+
+    @r.post("/execution/view", response_model=ExecutionFunction,
+            summary="Static function flow with contextual call targets; never executes project code")
+    def execution(core: CoreDep, body: s.ExecutionRequest, request: Request):
+        with request.app.state.execution_lock:
+            providers = request.app.state.executions
+            if core not in providers:
+                providers[core] = request.app.state.execution_factory(core.config)
+            provider = providers[core]
+        return execution_view(core, provider, body.symbol, body.bindings, body.path)
+
     @r.get("/symbols", response_model=s.SymbolCard, summary="A symbol, its definition, component and editor link")
     def symbol(core: CoreDep, id: str) -> s.SymbolCard:
         card = core.symbol(id)
@@ -171,6 +191,19 @@ def build_router() -> APIRouter:
                             defs=[_loc(l) for l in sym.defs], decls=[_loc(l) for l in sym.decls],
                             place=s.Place(scope=card.place[0], node=card.place[1]) if card.place else None,
                             editor_uri=card.editor_uri)
+
+    @r.get("/execution/entity", response_model=s.ExecutionEntity, summary="Object type, fields, methods and base types")
+    def execution_entity(core: CoreDep, id: str):
+        card = symbol(core, id)
+        def brief(sid):
+            info = core.state.symbols[sid]
+            location = place_loc(core.symbol(sid).symbol)
+            return s.SymbolBrief(id=sid, name=info.name, kind=info.kind, signature=info.signature,
+                                 component=core.component_of(sid), path=location.path if location else None,
+                                 line=location.range[0] + 1 if location else None, external=info.external)
+        members = [brief(info.id) for info in core.state.symbols.values() if info.parent == id]
+        bases = [brief(r.to_id) for r in core.store.relations(id, "inherits") if r.to_id in core.state.symbols]
+        return s.ExecutionEntity(symbol=card, members=sorted(members, key=lambda s: (s.kind, s.name, s.id)), bases=bases)
 
     def calls(core: Core, edges, limit: int) -> s.CallList:
         items = [s.CallEdge(caller=e.caller, callee=e.callee, caller_name=core.symbol_name(e.caller),
@@ -236,6 +269,14 @@ def build_router() -> APIRouter:
     def write_workspace(core: CoreDep, body: s.Workspace):
         return save_workspace(core.config.carma_dir, body.model_dump())
 
+    @r.get("/exploration", response_model=s.Exploration, summary="Saved execution exploration and selected mode")
+    def exploration(core: CoreDep):
+        return load_exploration(core.config.carma_dir)
+
+    @r.put("/exploration", response_model=s.Exploration, summary="Save expanded calls, positions and camera")
+    def write_exploration(core: CoreDep, body: s.Exploration):
+        return save_exploration(core.config.carma_dir, body.model_dump())
+
     @r.get("/layout-cache/{key}", response_model=s.CachedLayout, summary="Derived node positions for this project and graph")
     def layout_cache(core: CoreDep, key: str):
         if not key.isalnum() or len(key) > 100:
@@ -253,7 +294,7 @@ def build_router() -> APIRouter:
 
 
 def create_app(core: Core | None = None, *, ui_dir: Path | None = UI_DIR, keepalive: float = 15.0,
-               manager: ProjectManager | None = None, choose_folder=None) -> FastAPI:
+               manager: ProjectManager | None = None, choose_folder=None, execution_factory=ExecutionService) -> FastAPI:
     app = FastAPI(title="CARMA View API", version=s.API_VERSION.split("/")[1], openapi_url=f"{PREFIX}/openapi.json",
                   docs_url=None, redoc_url=None,
                   description="The core's API for the UI and the MCP server (docs/carma-spec.md, «Контракт 4»). "
@@ -262,6 +303,9 @@ def create_app(core: Core | None = None, *, ui_dir: Path | None = UI_DIR, keepal
     app.state.manager = manager
     app.state.choose_folder = choose_folder
     app.state.keepalive = keepalive
+    app.state.execution_factory = execution_factory
+    app.state.executions = WeakKeyDictionary()
+    app.state.execution_lock = threading.Lock()
     app.include_router(build_router())
     app.include_router(build_application_router(PREFIX))
 
@@ -280,6 +324,7 @@ def create_app(core: Core | None = None, *, ui_dir: Path | None = UI_DIR, keepal
     for failure in (ConfigError, CompileDbError):
         app.add_exception_handler(failure, lambda request, exc: _error(400, "project_error", str(exc)))
     app.add_exception_handler(OSError, lambda request, exc: _error(400, "file_error", "Could not access project files: " + str(exc)))
+    app.add_exception_handler(ExecutionUnavailable, lambda request, exc: _error(422, "execution_unavailable", str(exc)))
 
     for missing in (views.UnknownScope, UnknownComponentError, UnknownSymbol):
         app.add_exception_handler(missing, lambda request, exc: _error(404, "not_found", f"unknown: {exc.args[0]}"))

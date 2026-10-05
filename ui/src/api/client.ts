@@ -22,9 +22,17 @@ export type Camera = Schemas["Camera"];
 export type ApplicationState = Schemas["ApplicationState"];
 export type ProjectInspection = Schemas["ProjectInspection"];
 export type CachedLayout = Schemas["CachedLayout"];
+export type ExecutionFunction = Schemas["ExecutionFunction"];
+export type ExecutionNode = Schemas["ExecutionNode"];
+export type ExecutionCall = Schemas["ExecutionCall"];
+export type ExecutionEntity = Schemas["ExecutionEntity"];
+export type Exploration = Schemas["Exploration"];
+export type ExplorationView = Schemas["ExplorationView"];
+export type FunctionStudy = Schemas["FunctionStudy"];
+export type StudyAnnotation = Schemas["StudyAnnotation"];
 
 export const PREFIX = "/api/v0";
-export const API_VERSION = "api/0.3";
+export const API_VERSION = "api/0.5";
 
 let token: string | null = null;
 let project: string | null = null;
@@ -85,6 +93,13 @@ async function request<T>(method: string, path: string, params?: Params, body?: 
 }
 
 export const api = {
+  entrypoints: () => request<SymbolList>("GET", "/execution/entrypoints"),
+  execution: (symbol: string, bindings: Record<string, string> = {}, path?: string) =>
+    request<ExecutionFunction>("POST", "/execution/view", undefined, { symbol, bindings, path }),
+  entity: (id: string) => request<ExecutionEntity>("GET", "/execution/entity", { id }),
+  exploration: () => request<Exploration>("GET", "/exploration"),
+  saveExploration: (state: Exploration, expected: string | null) =>
+    request<Exploration>("PUT", "/exploration", undefined, state, expected),
   status: () => request<Status>("GET", "/status"),
   view: (scope: string) => request<View>("GET", "/view", { scope }),
   components: (parent = "root") => request<ComponentTree>("GET", "/components", { parent }),

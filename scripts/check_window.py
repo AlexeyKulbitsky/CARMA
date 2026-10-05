@@ -64,7 +64,9 @@ def main() -> int:
                     click("Open project folder…")
                     wait_for("Array.from(document.querySelectorAll('button')).some(b => b.textContent === 'Build map')")
                     click("Build map")
-                    wait_for("document.querySelectorAll('.react-flow__node').length > 0", 70)
+                    wait_for("Array.from(document.querySelectorAll('button')).some(b => b.textContent === 'Architecture')", 70)
+                    click("Architecture")
+                    wait_for("document.querySelector('[aria-label=\"Architecture map\"] .react-flow__node')", 70)
                     assert not self.window.evaluate_js("document.querySelector('.banner-error')?.textContent")
                     # Navigate through the real application controls, then close/reopen the project.
                     node = self.window.evaluate_js("document.querySelector('.react-flow__node').getAttribute('data-id')")

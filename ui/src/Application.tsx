@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { App } from "./App";
 import { application, configureClient, type ApplicationState, type ProjectInspection } from "./api/client";
 import { useMap } from "./store";
+import { useExecution } from "./execution/store";
 
 function ErrorMessage({ message }: { message: string }) {
   const [first, ...details] = message.split("\n");
@@ -97,8 +98,8 @@ export function Application() {
     {state.warnings.map((warning) => <div className="banner banner-warning" key={warning}>{warning}</div>)}
     {progress}
     <div className="application-map"><App key={`${state.active.id}:${revision}`} busy={busy}
-      onProjects={() => void action(async () => { await useMap.getState().flushWorkspace(); return application.close(); })}
-      onUpdate={() => void action(async () => { await useMap.getState().flushWorkspace(); return application.update(); })} /></div>
+      onProjects={() => void action(async () => { await Promise.all([useMap.getState().flushWorkspace(), useExecution.getState().flush()]); return application.close(); })}
+      onUpdate={() => void action(async () => { await Promise.all([useMap.getState().flushWorkspace(), useExecution.getState().flush()]); return application.update(); })} /></div>
   </div>;
 
   return <main className="project-home">

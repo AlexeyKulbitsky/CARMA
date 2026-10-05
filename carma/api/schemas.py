@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-API_VERSION = "api/0.3"
+API_VERSION = "api/0.5"
 
 IssueCode = Literal["invalid_model", "broken_anchor", "ambiguous_membership", "empty", "stale", "missing_dependency",
                     "undeclared_dependency", "cycle"]
@@ -286,6 +286,61 @@ class Workspace(Model):
     schema_version: Literal["workspace/0.1"] = "workspace/0.1"
     scope: str = Field(default="root", min_length=1)
     views: dict[str, WorkspaceView] = {}
+
+
+class ExecutionRequest(Model):
+    symbol: str = Field(min_length=1)
+    path: str | None = None
+    bindings: dict[str, str] = Field(default_factory=dict, max_length=128)
+
+
+class StudyAnnotation(Model):
+    title: str = Field(default="", max_length=300)
+    note: str = Field(default="", max_length=20000)
+    status: Literal["unread", "studying", "understood", "question"] = "unread"
+    color: str = Field(default="", pattern=r"^(|#[0-9a-fA-F]{6})$")
+
+
+class StudyGroup(Model):
+    id: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=300)
+    members: list[str] = Field(min_length=2, max_length=10000, description="Stable instruction anchors in source order")
+
+
+class FunctionStudy(Model):
+    groups: list[StudyGroup] = Field(default_factory=list, max_length=500)
+    dismissed: list[str] = Field(default_factory=list, max_length=1000)
+    annotations: dict[str, StudyAnnotation] = Field(default_factory=dict, max_length=10000)
+
+
+class DetachedStudy(Model):
+    function: str = Field(min_length=1, description="Expanded call-site key, or root")
+    group: str | None = None
+    position: Position
+
+
+class ExplorationView(Model):
+    expanded: dict[str, str] = Field(default_factory=dict, max_length=100)
+    origins: dict[str, str] = Field(default_factory=dict, max_length=100, description="Call site -> scope identity where its details were opened")
+    positions: dict[str, Position] = Field(default_factory=dict, max_length=10000)
+    camera: Camera | None = None
+    blocks: list[str] = Field(default_factory=list, max_length=1000)
+    detached: dict[str, DetachedStudy] = Field(default_factory=dict, max_length=100)
+
+
+class Exploration(Model):
+    schema_version: Literal["exploration/0.2"] = "exploration/0.2"
+    mode: Literal["execution", "architecture"] = "execution"
+    entry: str | None = None
+    entry_path: str | None = None
+    views: dict[str, ExplorationView] = Field(default_factory=dict, max_length=100)
+    studies: dict[str, FunctionStudy] = Field(default_factory=dict, max_length=1000, description="Function identity -> personal groups and annotations, independent of call sites")
+
+
+class ExecutionEntity(Model):
+    symbol: SymbolCard
+    members: list[SymbolBrief]
+    bases: list[SymbolBrief]
 
 
 class Project(Model):

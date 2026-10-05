@@ -1,0 +1,302 @@
+{
+  "$defs": {
+    "Camera": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "zoom": {
+          "exclusiveMinimum": 0,
+          "maximum": 20,
+          "title": "Zoom",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "zoom"
+      ],
+      "title": "Camera",
+      "type": "object"
+    },
+    "DetachedStudy": {
+      "additionalProperties": false,
+      "properties": {
+        "function": {
+          "description": "Expanded call-site key, or root",
+          "minLength": 1,
+          "title": "Function",
+          "type": "string"
+        },
+        "group": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        }
+      },
+      "required": [
+        "function",
+        "position"
+      ],
+      "title": "DetachedStudy",
+      "type": "object"
+    },
+    "ExplorationView": {
+      "additionalProperties": false,
+      "properties": {
+        "expanded": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 100,
+          "title": "Expanded",
+          "type": "object"
+        },
+        "origins": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Call site -> scope identity where its details were opened",
+          "maxProperties": 100,
+          "title": "Origins",
+          "type": "object"
+        },
+        "positions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Position"
+          },
+          "maxProperties": 10000,
+          "title": "Positions",
+          "type": "object"
+        },
+        "camera": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Camera"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "blocks": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Blocks",
+          "type": "array"
+        },
+        "detached": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DetachedStudy"
+          },
+          "maxProperties": 100,
+          "title": "Detached",
+          "type": "object"
+        }
+      },
+      "title": "ExplorationView",
+      "type": "object"
+    },
+    "FunctionStudy": {
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/StudyGroup"
+          },
+          "maxItems": 500,
+          "title": "Groups",
+          "type": "array"
+        },
+        "dismissed": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1000,
+          "title": "Dismissed",
+          "type": "array"
+        },
+        "annotations": {
+          "additionalProperties": {
+            "$ref": "#/$defs/StudyAnnotation"
+          },
+          "maxProperties": 10000,
+          "title": "Annotations",
+          "type": "object"
+        }
+      },
+      "title": "FunctionStudy",
+      "type": "object"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "StudyAnnotation": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Title",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 20000,
+          "title": "Note",
+          "type": "string"
+        },
+        "status": {
+          "default": "unread",
+          "enum": [
+            "unread",
+            "studying",
+            "understood",
+            "question"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "color": {
+          "default": "",
+          "pattern": "^(|#[0-9a-fA-F]{6})$",
+          "title": "Color",
+          "type": "string"
+        }
+      },
+      "title": "StudyAnnotation",
+      "type": "object"
+    },
+    "StudyGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "members": {
+          "description": "Stable instruction anchors in source order",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10000,
+          "minItems": 2,
+          "title": "Members",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "members"
+      ],
+      "title": "StudyGroup",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "exploration/0.2",
+      "default": "exploration/0.2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mode": {
+      "default": "execution",
+      "enum": [
+        "execution",
+        "architecture"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "entry": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entry"
+    },
+    "entry_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Entry Path"
+    },
+    "views": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExplorationView"
+      },
+      "maxProperties": 100,
+      "title": "Views",
+      "type": "object"
+    },
+    "studies": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FunctionStudy"
+      },
+      "description": "Function identity -> personal groups and annotations, independent of call sites",
+      "maxProperties": 1000,
+      "title": "Studies",
+      "type": "object"
+    }
+  },
+  "title": "Exploration",
+  "type": "object"
+}

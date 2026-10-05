@@ -15,6 +15,11 @@ def run(spec_path: Path) -> int:
         write_json(progress_path, {"stage": stage, "message": message, "done": done, "total": total})
 
     try:
+        if spec.get("kind") == "execution":
+            from carma.application.execution import run_analysis
+            run_analysis(spec)
+            write_json(spec_path.parent / "result.json", {"ok": True})
+            return 0
         warnings = prepare(Path(spec["root"]), spec["choice"], Path(spec["staging"]), progress, reindex=spec["reindex"])
         write_json(spec_path.parent / "result.json", {"ok": True, "warnings": warnings})
         return 0

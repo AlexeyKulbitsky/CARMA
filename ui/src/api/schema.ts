@@ -89,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/execution/entrypoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Suggested program entry points */
+        get: operations["execution_entries_api_v0_execution_entrypoints_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/execution/view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Static function flow with contextual call targets; never executes project code */
+        post: operations["execution_api_v0_execution_view_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/symbols": {
         parameters: {
             query?: never;
@@ -98,6 +132,23 @@ export interface paths {
         };
         /** A symbol, its definition, component and editor link */
         get: operations["symbol_api_v0_symbols_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/execution/entity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Object type, fields, methods and base types */
+        get: operations["execution_entity_api_v0_execution_entity_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -219,6 +270,24 @@ export interface paths {
         get: operations["workspace_api_v0_workspace_get"];
         /** Save the last level, camera and filters */
         put: operations["write_workspace_api_v0_workspace_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/exploration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saved execution exploration and selected mode */
+        get: operations["exploration_api_v0_exploration_get"];
+        /** Save expanded calls, positions and camera */
+        put: operations["write_exploration_api_v0_exploration_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -553,6 +622,17 @@ export interface components {
             /** Declared */
             declared: boolean;
         };
+        /** DetachedStudy */
+        DetachedStudy: {
+            /**
+             * Function
+             * @description Expanded call-site key, or root
+             */
+            function: string;
+            /** Group */
+            group?: string | null;
+            position: components["schemas"]["Position"];
+        };
         /** ErrorBody */
         ErrorBody: {
             /**
@@ -571,6 +651,280 @@ export interface components {
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorBody"];
+        };
+        /** ExecutionCall */
+        ExecutionCall: {
+            /** Symbol */
+            symbol: string | null;
+            /** Name */
+            name: string;
+            /** Receiver */
+            receiver?: string | null;
+            /**
+             * Arguments
+             * @default []
+             */
+            arguments: (string | null)[];
+            /**
+             * Virtual
+             * @default false
+             */
+            virtual: boolean;
+            /**
+             * Candidates
+             * @default []
+             */
+            candidates: string[];
+            /**
+             * Expandable
+             * @default []
+             */
+            expandable: string[];
+            /**
+             * Resolution
+             * @default direct
+             * @enum {string}
+             */
+            resolution: "direct" | "inferred" | "virtual" | "unknown";
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /**
+             * Bindings
+             * @default {}
+             */
+            bindings: {
+                [key: string]: string;
+            };
+            /**
+             * Assignments
+             * @default []
+             */
+            assignments: components["schemas"]["ExecutionEffect"][];
+        };
+        /** ExecutionEdge */
+        ExecutionEdge: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+        };
+        /** ExecutionEffect */
+        ExecutionEffect: {
+            /** Target */
+            target: string;
+            /** Value */
+            value?: string | null;
+            /** Type Symbol */
+            type_symbol?: string | null;
+            /** Ownership */
+            ownership?: string | null;
+        };
+        /** ExecutionEntity */
+        ExecutionEntity: {
+            symbol: components["schemas"]["SymbolCard"];
+            /** Members */
+            members: components["schemas"]["SymbolBrief"][];
+            /** Bases */
+            bases: components["schemas"]["SymbolBrief"][];
+        };
+        /** ExecutionFunction */
+        ExecutionFunction: {
+            /**
+             * Schema Version
+             * @default execution/0.2
+             * @constant
+             */
+            schema_version: "execution/0.2";
+            /** Symbol */
+            symbol: string;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** Entry */
+            entry: string;
+            /** Exit */
+            exit: string;
+            /**
+             * Parameters
+             * @default []
+             */
+            parameters: string[];
+            /** Nodes */
+            nodes: components["schemas"]["ExecutionNode"][];
+            /** Edges */
+            edges: components["schemas"]["ExecutionEdge"][];
+            /**
+             * Objects
+             * @default []
+             */
+            objects: components["schemas"]["ExecutionObject"][];
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: string[];
+            /**
+             * Groups
+             * @default []
+             */
+            groups: components["schemas"]["ExecutionGroup"][];
+        };
+        /** ExecutionGroup */
+        ExecutionGroup: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Members */
+            members: string[];
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "comment" | "structure";
+        };
+        /** ExecutionNode */
+        ExecutionNode: {
+            /** Id */
+            id: string;
+            /**
+             * Anchor
+             * @description Content anchor stable across line shifts; repeated statements have distinct occurrences
+             * @default
+             */
+            anchor: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "entry" | "exit" | "action" | "branch" | "loop" | "return" | "break" | "continue" | "opaque";
+            /** Label */
+            label: string;
+            /** Code */
+            code: string;
+            /** Path */
+            path: string;
+            /** Line */
+            line: number;
+            /** End Line */
+            end_line: number;
+            /**
+             * Calls
+             * @default []
+             */
+            calls: components["schemas"]["ExecutionCall"][];
+            /**
+             * Effects
+             * @default []
+             */
+            effects: components["schemas"]["ExecutionEffect"][];
+            /**
+             * Objects
+             * @default []
+             */
+            objects: string[];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** ExecutionObject */
+        ExecutionObject: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Type Name */
+            type_name: string;
+            /** Type Symbol */
+            type_symbol: string | null;
+            /**
+             * Ownership
+             * @enum {string}
+             */
+            ownership: "value" | "borrowed" | "unique" | "shared" | "raw";
+            /** Created */
+            created: boolean;
+            /** Line */
+            line: number;
+        };
+        /** ExecutionRequest */
+        ExecutionRequest: {
+            /** Symbol */
+            symbol: string;
+            /** Path */
+            path?: string | null;
+            /** Bindings */
+            bindings?: {
+                [key: string]: string;
+            };
+        };
+        /** Exploration */
+        Exploration: {
+            /**
+             * Schema Version
+             * @default exploration/0.2
+             * @constant
+             */
+            schema_version: "exploration/0.2";
+            /**
+             * Mode
+             * @default execution
+             * @enum {string}
+             */
+            mode: "execution" | "architecture";
+            /** Entry */
+            entry?: string | null;
+            /** Entry Path */
+            entry_path?: string | null;
+            /** Views */
+            views?: {
+                [key: string]: components["schemas"]["ExplorationView"];
+            };
+            /**
+             * Studies
+             * @description Function identity -> personal groups and annotations, independent of call sites
+             */
+            studies?: {
+                [key: string]: components["schemas"]["FunctionStudy"];
+            };
+        };
+        /** ExplorationView */
+        ExplorationView: {
+            /** Expanded */
+            expanded?: {
+                [key: string]: string;
+            };
+            /**
+             * Origins
+             * @description Call site -> scope identity where its details were opened
+             */
+            origins?: {
+                [key: string]: string;
+            };
+            /** Positions */
+            positions?: {
+                [key: string]: components["schemas"]["Position"];
+            };
+            camera?: components["schemas"]["Camera"] | null;
+            /** Blocks */
+            blocks?: string[];
+            /** Detached */
+            detached?: {
+                [key: string]: components["schemas"]["DetachedStudy"];
+            };
         };
         /** FactsStatus */
         FactsStatus: {
@@ -596,6 +950,17 @@ export interface components {
         FolderChoice: {
             /** Path */
             path: string | null;
+        };
+        /** FunctionStudy */
+        FunctionStudy: {
+            /** Groups */
+            groups?: components["schemas"]["StudyGroup"][];
+            /** Dismissed */
+            dismissed?: string[];
+            /** Annotations */
+            annotations?: {
+                [key: string]: components["schemas"]["StudyAnnotation"];
+            };
         };
         /** InterfaceSymbol */
         InterfaceSymbol: {
@@ -808,6 +1173,42 @@ export interface components {
             issues: number;
             /** Highlight */
             highlight: boolean;
+        };
+        /** StudyAnnotation */
+        StudyAnnotation: {
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /**
+             * Status
+             * @default unread
+             * @enum {string}
+             */
+            status: "unread" | "studying" | "understood" | "question";
+            /**
+             * Color
+             * @default
+             */
+            color: string;
+        };
+        /** StudyGroup */
+        StudyGroup: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Members
+             * @description Stable instruction anchors in source order
+             */
+            members: string[];
         };
         /** SymbolBrief */
         SymbolBrief: {
@@ -1276,6 +1677,86 @@ export interface operations {
             };
         };
     };
+    execution_entries_api_v0_execution_entrypoints_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SymbolList"];
+                };
+            };
+            /** @description unknown ID or scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    execution_api_v0_execution_view_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionFunction"];
+                };
+            };
+            /** @description unknown ID or scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     symbol_api_v0_symbols_get: {
         parameters: {
             query: {
@@ -1294,6 +1775,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SymbolCard"];
+                };
+            };
+            /** @description unknown ID or scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    execution_entity_api_v0_execution_entity_get: {
+        parameters: {
+            query: {
+                id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionEntity"];
                 };
             };
             /** @description unknown ID or scope */
@@ -1626,6 +2147,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description unknown ID or scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    exploration_api_v0_exploration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exploration"];
+                };
+            };
+            /** @description unknown ID or scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description invalid request */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    write_exploration_api_v0_exploration_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Exploration"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exploration"];
                 };
             };
             /** @description unknown ID or scope */
