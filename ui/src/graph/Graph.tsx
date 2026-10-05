@@ -9,7 +9,7 @@ import {
   useNodesState,
   useReactFlow,
 } from "@xyflow/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { View, ViewEdge } from "../api/client";
 import { autoLayout, type Positions, withPinned } from "../layout/layout";
@@ -74,6 +74,10 @@ export function Graph() {
 /** One level; mounted anew for every scope, so fitView frames the level once its nodes are in place. */
 function Level({ view, positions }: { view: View; positions: Positions }) {
   const flow = useReactFlow();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuOrigin = useRef<HTMLElement | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; target: { kind: "node"; id: string } | { kind: "edge"; src: string; dst: string } | null } | null>(null);
   const metric = useMap((s) => s.metric);
   const threshold = useMap((s) => s.threshold);
   const selection = useMap((s) => s.selection);
@@ -131,7 +135,53 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
     });
   }, [view, metric, threshold, focus, selection]);
 
+  function showMenu(event: { clientX: number; clientY: number; preventDefault(): void }, target: NonNullable<typeof menu>["target"] = null) {
+    event.preventDefault();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    menuOrigin.current = document.activeElement as HTMLElement;
+    setMenu({ x: Math.max(8, Math.min(event.clientX - rect.left, rect.width - 248)),
+      y: Math.max(8, Math.min(event.clientY - rect.top, rect.height - 260)), target });
+  }
+  function focusDetails() { document.getElementById("map-details")?.focus(); }
+  const nodeTarget = menu?.target?.kind === "node" ? menu.target : null;
+  const menuNode = nodeTarget ? [...view.nodes, ...view.boundary].find((node) => node.id === nodeTarget.id) : undefined;
+  const scope = menuNode && drillScope(menuNode.id, menuNode.type);
+  const actions: { label: string; run: () => void }[] = menuNode ? [
+    { label: "Show block details", run: () => { select({ kind: "node", id: menuNode.id }); focusDetails(); } },
+    ...(scope ? [{ label: `Open ${cardTitle(menuNode)}`, run: () => navigate(scope) }] : []),
+    { label: "Adjust position…", run: () => { select({ kind: "node", id: menuNode.id }); focusDetails();
+      requestAnimationFrame(() => document.querySelector<HTMLElement>(".position-controls")?.scrollIntoView({ block: "nearest" })); } },
+  ] : menu?.target?.kind === "edge" ? [
+    { label: "Show connection details", run: () => { const target = menu.target as { kind: "edge"; src: string; dst: string };
+      select({ kind: "edge", src: target.src, dst: target.dst }); focusDetails(); } },
+  ] : [
+    { label: "Fit map", run: () => void flow.fitView({ padding: .12, minZoom: .8 }) },
+    { label: "Show level details", run: () => { select(null); focusDetails(); } },
+    ...(view.scope !== "root" ? [{ label: "Go to project map", run: () => navigate("root") }] : []),
+  ];
+  useEffect(() => {
+    if (!menu) return;
+    menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const dismiss = (event: PointerEvent) => { if (!menuRef.current?.contains(event.target as globalThis.Node)) setMenu(null); };
+    window.addEventListener("pointerdown", dismiss);
+    return () => window.removeEventListener("pointerdown", dismiss);
+  }, [menu]);
+
   return (
+    <div className="architecture-canvas" ref={canvasRef} tabIndex={0} aria-label="Architecture canvas actions" onKeyDown={(event) => {
+      if (!(event.key === "ContextMenu" || event.key === "F10" && event.shiftKey)) return;
+      const node = (event.target as Element).closest<HTMLElement>('.react-flow__node[data-id]');
+      const edge = (event.target as Element).closest<HTMLElement>('.react-flow__edge[data-id]');
+      const id = node?.dataset.id;
+      const edgeId = edge?.dataset.id;
+      const pair = edgeId && view.edges.find((item) => `${item.src}->${item.dst}` === edgeId);
+      const target = id ? { kind: "node" as const, id } : pair ? { kind: "edge" as const, src: pair.src, dst: pair.dst } : null;
+      if (target?.kind === "node") select(target);
+      if (target?.kind === "edge") select(target);
+      const rect = (node ?? edge ?? canvasRef.current)!.getBoundingClientRect();
+      showMenu({ clientX: rect.left + 18, clientY: rect.top + 18, preventDefault: () => event.preventDefault() }, target);
+    }}>
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -143,10 +193,15 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
         if (scope) navigate(scope);
       }}
       onEdgeClick={(_, edge) => select({ kind: "edge", src: edge.source, dst: edge.target })}
-      onPaneClick={() => select(null)}
+      onNodeContextMenu={(event, node) => { select({ kind: "node", id: node.id }); showMenu(event, { kind: "node", id: node.id }); }}
+      onEdgeContextMenu={(event, edge) => { select({ kind: "edge", src: edge.source, dst: edge.target });
+        showMenu(event, { kind: "edge", src: edge.source, dst: edge.target }); }}
+      onPaneContextMenu={(event) => showMenu(event)}
+      onPaneClick={() => { setMenu(null); select(null); }}
       onNodeDragStop={(_, node) => void pin(node.id, node.position)}
       onlyRenderVisibleElements
       nodesConnectable={false}
+      deleteKeyCode={null}
       zoomOnDoubleClick={false}
       defaultViewport={camera ?? undefined}
       fitView={!camera}
@@ -159,5 +214,19 @@ function Level({ view, positions }: { view: View; positions: Positions }) {
       <Controls showInteractive={false} />
       <MiniMap pannable zoomable className="minimap" ariaLabel="Map overview; drag or zoom to navigate" />
     </ReactFlow>
+    {menu && <div className="architecture-context-menu" ref={menuRef} role="menu" aria-label={menu.target?.kind === "node" ? "Block actions" : menu.target?.kind === "edge" ? "Connection actions" : "Canvas actions"}
+      style={{ left: menu.x, top: menu.y }} onKeyDown={(event) => {
+        if (event.key === "Escape") { setMenu(null); menuOrigin.current?.focus(); event.stopPropagation(); return; }
+        if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const buttons = [...menuRef.current!.querySelectorAll<HTMLButtonElement>("button")];
+        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+        buttons[event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 :
+          (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+      }}>
+      {actions.map((action) => <button type="button" role="menuitem" key={action.label}
+        onClick={() => { setMenu(null); action.run(); }}>{action.label}</button>)}
+    </div>}
+    </div>
   );
 }

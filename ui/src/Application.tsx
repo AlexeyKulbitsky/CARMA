@@ -4,6 +4,7 @@ import { App } from "./App";
 import { application, configureClient, type ApplicationState, type ProjectInspection } from "./api/client";
 import { useMap } from "./store";
 import { useExecution } from "./execution/store";
+import { ThemeControl } from "./ThemeControl";
 
 function ErrorMessage({ message }: { message: string }) {
   const [first, ...details] = message.split("\n");
@@ -104,7 +105,7 @@ export function Application() {
 
   return <main className="project-home">
     <div className="project-home-inner">
-      <header className="project-heading"><span className="project-logo">C</span><div><h1>CARMA</h1><p>Your code, mapped.</p></div></header>
+      <header className="project-heading"><span className="project-logo">C</span><div><h1>CARMA</h1><p>Your code, mapped.</p></div><ThemeControl /></header>
       {(error || jobError) && <ErrorMessage message={error ?? jobError!} />}
       {!state ? <p role="status">Starting CARMA…</p> : <>
         <button className="button primary open-project" disabled={busy} onClick={() => void inspectFolder()}>Open project folder…</button>

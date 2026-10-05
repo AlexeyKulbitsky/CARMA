@@ -9,6 +9,7 @@ import { SidePanel } from "./panels/SidePanel";
 import { useMap } from "./store";
 import { ExecutionControls, ExecutionMap } from "./execution/ExecutionMap";
 import { useExecution } from "./execution/store";
+import { ThemeControl } from "./ThemeControl";
 
 export function App({ onProjects, onUpdate, busy = false }: { onProjects?: () => void; onUpdate?: () => void; busy?: boolean }) {
   const open = useMap((s) => s.open);
@@ -57,6 +58,7 @@ export function App({ onProjects, onUpdate, busy = false }: { onProjects?: () =>
           </div>
           {mode === "execution" ? <ExecutionControls /> : <><Breadcrumbs /><Search /><Toolbar /></>}
           {onUpdate && <button className="button" onClick={onUpdate} disabled={busy}>Update map</button>}
+          <ThemeControl />
         </header>
         {error && (
           <div className="banner banner-error" role="alert">

@@ -80,7 +80,7 @@ def main() -> int:
                     if self.window.evaluate_js("Boolean(" + expression + ")"):
                         return
                     time.sleep(.1)
-                raise AssertionError(self.window.evaluate_js("document.body.innerText"))
+                raise AssertionError(self.window.evaluate_js("document.body.textContent"))
 
             def click(label):
                 expression = "Array.from(document.querySelectorAll('button')).find(b => b.textContent === " + json.dumps(label) + ")"
@@ -101,6 +101,36 @@ def main() -> int:
 
             def exercise():
                 try:
+                    def contrast(foreground, background):
+                        def luminance(color):
+                            if len(color) == 4 and color.startswith("#"):
+                                color = "#" + "".join(c * 2 for c in color[1:])
+                            assert color.startswith("#") and len(color) == 7, color
+                            channels = [int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+                            linear = [c / 12.92 if c <= .04045 else ((c + .055) / 1.055) ** 2.4 for c in channels]
+                            return sum(a * b for a, b in zip(linear, (.2126, .7152, .0722)))
+                        a, b = sorted((luminance(foreground), luminance(background)))
+                        return (b + .05) / (a + .05)
+
+                    def check_palette():
+                        colors = {name: self.window.evaluate_js("getComputedStyle(document.documentElement).getPropertyValue(" + json.dumps(name) + ").trim()")
+                                  for name in ("--panel", "--text", "--muted", "--accent", "--control-line", "--warning-bg", "--warning-text")}
+                        assert all(colors.values()), colors
+                        for name in ("--text", "--muted", "--accent"):
+                            assert contrast(colors[name], colors["--panel"]) >= 4.5, (name, colors)
+                        assert contrast(colors["--control-line"], colors["--panel"]) >= 3, colors
+                        assert contrast(colors["--warning-text"], colors["--warning-bg"]) >= 4.5, colors
+
+                    self.window.evaluate_js("var theme=document.querySelector('[aria-label=\"Color theme\"]');theme.value='dark';theme.dispatchEvent(new Event('change',{bubbles:true}));")
+                    wait_for("document.documentElement.dataset.theme === 'dark'")
+                    check_palette()
+                    self.window.evaluate_js("theme.value='light';theme.dispatchEvent(new Event('change',{bubbles:true}));")
+                    wait_for("document.documentElement.dataset.theme === 'light'")
+                    check_palette()
+                    self.window.evaluate_js("document.body.style.zoom='2'")
+                    assert self.window.evaluate_js("document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2")
+                    self.window.evaluate_js("document.body.style.zoom='';theme.value='dark';theme.dispatchEvent(new Event('change',{bubbles:true}));")
+                    wait_for("document.documentElement.dataset.theme === 'dark'")
                     click("Open project folder…")
                     click("Build map")
                     wait_for("document.querySelector('.execution-card') && document.querySelector('.execution-step-list')")
@@ -123,10 +153,29 @@ def main() -> int:
                     self.window.evaluate_js("var e=document.querySelector('[aria-label=\"New group name\"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'GLFW Init'); e.dispatchEvent(new Event('input',{bubbles:true}));")
                     click("Group selected blocks")
                     wait_for("document.body.innerText.includes('GLFW Init')")
+                    wait_for("document.querySelector('.react-flow__node.selected .execution-group')")
+                    group_id = self.window.evaluate_js("document.querySelector('.react-flow__node.selected').getAttribute('data-id')")
+                    group_button = ".react-flow__node[data-id=" + json.dumps(group_id) + "] .execution-card-actions button"
+                    before_label = self.window.evaluate_js("document.querySelector(" + json.dumps(group_button) + ").textContent")
+                    after_label = "Expand block" if before_label == "Collapse block" else "Collapse block"
+                    self.window.evaluate_js("document.querySelector('.react-flow__node.selected').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));")
+                    wait_for("document.querySelector(" + json.dumps(group_button) + ")?.textContent === " + json.dumps(after_label))
+                    click("Undo")
+                    wait_for("document.querySelector(" + json.dumps(group_button) + ")?.textContent === " + json.dumps(before_label))
+                    click("Redo")
+                    wait_for("document.querySelector(" + json.dumps(group_button) + ")?.textContent === " + json.dumps(after_label))
+                    click("Undo")
+                    wait_for("document.querySelector('.react-flow__node.selected .execution-group')")
+                    self.window.evaluate_js("var node=document.querySelector('.react-flow__node.selected');var r=node.getBoundingClientRect();node.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+25,clientY:r.top+25}));")
+                    wait_for("document.querySelector('[role=menu]') && document.body.innerText.includes('Mark understood')")
+                    click("Mark understood")
                     wait_for("document.querySelector('[aria-label=\"Study status\"]')")
                     self.window.evaluate_js("var e=document.querySelector('[aria-label=\"Study status\"]'); e.value='understood'; e.dispatchEvent(new Event('change',{bubbles:true}));")
                     self.window.evaluate_js("var e=document.querySelector('[aria-label=\"Study note\"]'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,'Window context settings'); e.dispatchEvent(new Event('input',{bubbles:true}));")
                     self.window.evaluate_js("document.querySelector('[aria-label=\"Use color #438a60\"]').click()")
+                    wait_for("document.querySelector('.execution-card.study-colored')")
+                    assert self.window.evaluate_js("parseFloat(getComputedStyle(document.querySelector('.execution-card.study-colored')).borderTopWidth) >= 6")
+                    assert self.window.evaluate_js("parseInt(getComputedStyle(document.querySelector('.execution-card.study-colored strong')).fontWeight,10) >= 700")
                     click("Open separately")
                     wait_for("document.body.innerText.includes('Click a free spot')")
                     self.window.evaluate_js("var e=document.querySelector('.react-flow__pane');var r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+100,clientY:r.top+150}));")
@@ -154,14 +203,23 @@ def main() -> int:
                     click("Projects")
                     click("Open")
                     wait_for("document.querySelector('.execution-card') && document.body.innerText.toLowerCase().includes('expanded functions')")
+                    assert self.window.evaluate_js("document.documentElement.dataset.theme === 'dark'")
                     time.sleep(.5)
                     after = json.loads((project / ".carma/exploration.json").read_text(encoding="utf-8"))
                     key = next(iter(before["views"]))
                     assert before["views"][key] == after["views"][key], (before, after)
+                    self.window.evaluate_js("var list=[...document.querySelectorAll('.react-flow__node[data-id^=\"root/\"]')].slice(0,2);list.forEach(n=>n.dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true}))); ")
+                    wait_for("document.body.innerText.includes('2 blocks selected')")
+                    self.window.evaluate_js("var e=document.querySelector('[aria-label=\"Selected status\"]');e.value='understood';e.dispatchEvent(new Event('change',{bubbles:true}));")
+                    self.window.evaluate_js("var e=document.querySelector('[aria-label=\"Selected note\"]');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,'Reviewed together');e.dispatchEvent(new Event('input',{bubbles:true}));")
+                    click("Apply note")
+                    time.sleep(.5)
+                    latest = json.loads((project / ".carma/exploration.json").read_text(encoding="utf-8"))
+                    assert sum(a.get("note") == "Reviewed together" for s in latest.get("studies", {}).values() for a in s.get("annotations", {}).values()) >= 2
                     assert not self.window.evaluate_js("document.querySelector('.banner-error')?.textContent")
                     outcome.update(ok=True, saved=after, text=self.window.evaluate_js("document.body.innerText"))
                 except Exception:
-                    outcome.update(ok=False, error=traceback.format_exc(), text=self.window.evaluate_js("document.body.innerText"))
+                    outcome.update(ok=False, error=traceback.format_exc(), text=self.window.evaluate_js("document.body.textContent"))
                 finally:
                     (directory / "result.json").write_text(json.dumps(outcome, indent=2), encoding="utf-8")
                     self.window.destroy()

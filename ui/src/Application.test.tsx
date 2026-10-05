@@ -53,7 +53,7 @@ describe("project workflow", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Open project folder…" }));
     const build = await screen.findByRole("button", { name: "Build map" });
     expect((build as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "release" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Build configuration" }), { target: { value: "release" } });
     expect((build as HTMLButtonElement).disabled).toBe(false);
   });
 

@@ -35,6 +35,8 @@ The default **Execution** mode suggests entry points. Read each scope from top t
 
 Select consecutive checkboxes in **Steps**, name the selection, and choose **Group selected blocks** to build your own meaningful scope. **My understanding** adds a title, note, color and independent study status. **Ungroup block** restores its instructions. **Open separately** lets you place another view in a free spot on the canvas; drag its heading to move the whole area. It shares the original's knowledge and has independent disclosure. Closing an area keeps its notes.
 
+Choose **Select blocks** to drag a selection rectangle, or hold Shift while dragging in pan mode. Ctrl/Cmd+click adds individual blocks. The selection panel can group consecutive blocks in one scope and apply a status, color or note to all selected blocks. Double click a group or a step with one expandable call to open or close its details. Right click a block or the canvas for context actions; Shift+F10 opens the same menu from the keyboard. **Undo** and **Redo** reverse changes to study data, disclosure and block positions within the current exploration; Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z work while focus is outside an editor. Choose **System**, **Light** or **Dark** in the header; the preference is saved on this device.
+
 Expanded calls and blocks, separate views, positions, camera and the selected mode are saved per project in `.carma/exploration.json` (`exploration/0.2`, migrated from 0.1). Personal groups and annotations are shared across a function's call sites using content anchors. Unattached knowledge after source edits is retained and shown for review. Function analysis runs on demand in an isolated worker and is cached under `.carma/cache/execution/`; existing projects do not need a full reindex. Source/header or build-setting changes invalidate the analysis cache. Flow facts, study data and rendering remain separate; a different window or renderer can use the same `execution/0.2` and View API contracts.
 
 Execution diagrams describe possible source paths, rather than a recorded run. Virtual implementations inferred from object assignments are labelled **inferred**; unresolved dispatch shows candidates. Lambda bodies are deferred, and calls within an expression do not imply an evaluation order. Switch/try/goto blocks are shown without expanding their control flow. Implicit destruction, exception unwinding and cross-thread execution are not reconstructed in this first version.
@@ -81,6 +83,8 @@ uv run python scripts/build_desktop.py
 ```
 
 The output is `dist/CARMA/` on Windows/Linux, and an application bundle on macOS. `scripts/check_desktop.py` checks the packaged Windows worker on a fresh project with external tools removed from PATH. `scripts/check_window.py` exercises project creation, map rendering, manual positioning and viewing-state restoration in a hidden native Windows window. `scripts/check_execution_window.py` checks contextual call expansion, entity inspection and exploration restoration. Set `CARMA_DATA_DIR` to isolate application settings for development.
+
+`npm run build` updates the source-install UI in `carma/_ui`; an existing `dist/CARMA/` still contains its previous UI. Rebuild the portable application after UI changes, then close and reopen the window to load it.
 
 ## License
 

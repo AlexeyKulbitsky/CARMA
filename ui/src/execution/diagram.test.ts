@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExecutionFunction } from "../api/client";
 import { executionDiagram, executionPositions } from "./diagram";
-import { groupSelection, studyBlocks, studyKey } from "./study";
+import { groupSelection, groupVisibleSteps, studyBlocks, studyKey } from "./study";
 import type { Exploration, ExplorationView } from "../api/client";
 import { callKey, locateCall } from "./store";
 
@@ -73,6 +73,16 @@ describe("execution diagrams", () => {
     expect(groupSelection(root, [["a"], ["b"], ["c"]], [0, 2]).error).toBeTruthy();
     root.edges = [{ source: "start", target: "a", label: "" }, { source: "start", target: "b", label: "" }];
     expect(groupSelection(root, [["a"], ["b"]], [0, 1]).error).toContain("control-flow");
+  });
+  it("uses canvas-selected consecutive steps for the same safe grouping rule", () => {
+    const root = flow("main");
+    root.nodes.splice(2, 0, { ...root.nodes[1], id: "middle", label: "Configure", code: "Configure()" },
+      { ...root.nodes[1], id: "last", label: "Start", code: "Start()" });
+    root.edges = [{ source: "start", target: "call", label: "" }, { source: "call", target: "middle", label: "" },
+      { source: "middle", target: "last", label: "" }, { source: "last", target: "end", label: "" }];
+    const items = executionDiagram({ root }).nodes;
+    expect(groupVisibleSteps(root, items, ["root/call", "root/middle"]).members).toEqual(["call", "middle"]);
+    expect(groupVisibleSteps(root, items, ["root/call", "root/last"]).error).toContain("consecutive");
   });
   it("folds nested call details with their scope and opens calls inside separate views", () => {
     const root = flow("main"), init = flow("init"), key = callKey("root", "call", 0);

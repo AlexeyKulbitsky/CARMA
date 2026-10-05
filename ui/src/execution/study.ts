@@ -1,4 +1,5 @@
 import type { ExecutionFunction, ExecutionNode, FunctionStudy } from "../api/client";
+import type { DiagramNode } from "./diagram";
 
 export const studyKey = (flow: ExecutionFunction) => `${flow.symbol}@${flow.path}`;
 export const anchor = (node: ExecutionNode) => node.anchor || node.id;
@@ -35,4 +36,22 @@ export function groupSelection(flow: ExecutionFunction, ordered: string[][], cho
   if (incoming.size > 1 || members.some((id) => [flow.entry, flow.exit].includes(id)))
     return { error: "This selection crosses control-flow entries. Select complete branches or loops.", members: [] as string[] };
   return { error: null, members: flow.nodes.filter((n) => members.includes(n.id)).map(anchor) };
+}
+
+const syntheticLabels = new Set(["Then", "Else", "Continue", "Loop body", "After loop"]);
+
+export function visibleStudySteps(items: DiagramNode[]) {
+  return items.filter((n) => n.group || (!["entry", "exit"].includes(n.step.kind) && !syntheticLabels.has(n.step.label)));
+}
+
+/** Translate canvas or checklist selection into the same control-flow safe group. */
+export function groupVisibleSteps(flow: ExecutionFunction, items: DiagramNode[], ids: string[]) {
+  const visible = visibleStudySteps(items);
+  const chosen = visible.map((item, index) => ids.includes(item.id) ? index : -1).filter((index) => index >= 0);
+  const ordered = visible.map((n, index) => {
+    const first = items.findIndex((item) => item.id === n.id);
+    const end = index + 1 < visible.length ? items.findIndex((item) => item.id === visible[index + 1].id) : items.length;
+    return items.slice(first, end).filter((item) => !["entry", "exit"].includes(item.step.kind)).flatMap((item) => item.members);
+  });
+  return groupSelection(flow, ordered, chosen);
 }
